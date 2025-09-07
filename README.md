@@ -24,7 +24,7 @@ Tom is a Raspberry PI server.
 
 ### Chat
 
-Slack Chat Bot. Example `!tom start`
+Slack Chat Bot. Example `/tom start`
 
 ### Chess
 

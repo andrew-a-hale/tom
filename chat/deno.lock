@@ -1,0 +1,49 @@
+{
+  "version": "5",
+  "specifiers": {
+    "jsr:@slack/protocols@0.0.3": "0.0.3",
+    "jsr:@std/cli@~0.224.6": "0.224.7",
+    "jsr:@std/collections@^1.0.5": "1.1.3",
+    "jsr:@std/internal@^1.0.10": "1.0.10",
+    "jsr:@std/jsonc@^1.0.1": "1.0.2",
+    "jsr:@std/path@1.1.0": "1.1.0",
+    "jsr:@std/path@^1.0.3": "1.1.2"
+  },
+  "jsr": {
+    "@slack/protocols@0.0.3": {
+      "integrity": "59a1f824364d2e03f87aa57f88385be73f70d94a81d09f5f2fb4de476903bc85",
+      "dependencies": [
+        "jsr:@std/cli"
+      ]
+    },
+    "@std/cli@0.224.7": {
+      "integrity": "654ca6477518e5e3a0d3fabafb2789e92b8c0febf1a1d24ba4b567aba94b5977"
+    },
+    "@std/collections@1.1.3": {
+      "integrity": "bf8b0818886df6a32b64c7d3b037a425111f28278d69fd0995aeb62777c986b0"
+    },
+    "@std/internal@1.0.10": {
+      "integrity": "e3be62ce42cab0e177c27698e5d9800122f67b766a0bea6ca4867886cbde8cf7"
+    },
+    "@std/jsonc@1.0.2": {
+      "integrity": "909605dae3af22bd75b1cbda8d64a32cf1fd2cf6efa3f9e224aba6d22c0f44c7"
+    },
+    "@std/path@1.1.0": {
+      "integrity": "ddc94f8e3c275627281cbc23341df6b8bcc874d70374f75fec2533521e3d6886"
+    },
+    "@std/path@1.1.2": {
+      "integrity": "c0b13b97dfe06546d5e16bf3966b1cadf92e1cc83e56ba5476ad8b498d9e3038",
+      "dependencies": [
+        "jsr:@std/internal"
+      ]
+    }
+  },
+  "remote": {
+    "https://deno.land/x/deno_slack_hooks@1.4.0/check_update.ts": "bbf2d4ae838afdbe710b599aa2ab1af6ad46c723f15810dbe10923493d73be87",
+    "https://deno.land/x/deno_slack_hooks@1.4.0/doctor.ts": "334e311f54ddd2afff1d05d2336744f1ce8682684598c39e65541bdf45965457",
+    "https://deno.land/x/deno_slack_hooks@1.4.0/get_manifest.ts": "c080705e24c19408ac44391b8ca9ad22631f13ba554a80cb0f554f7677a39bdd",
+    "https://deno.land/x/deno_slack_hooks@1.4.0/libraries.ts": "8e8d49d42fcfb69e39c91cb44d1f6a1400741b694bebf39e6adab6e9459c1122",
+    "https://deno.land/x/deno_slack_hooks@1.4.0/utilities.ts": "2227ab599f2e716940da6b0ab4d3628b66d63c95b05af56768045b0e126bbe29",
+    "https://deno.land/x/deno_slack_hooks@1.4.0/version.ts": "e81371bdfa01f0eb008302ef111f27a3e3b540b883e3ca196b6406538f9e5a34"
+  }
+}
