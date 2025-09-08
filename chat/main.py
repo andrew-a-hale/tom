@@ -22,7 +22,6 @@ from slack_bolt.adapter.socket_mode import SocketModeHandler
 logging.basicConfig(level=logging.DEBUG)
 load_dotenv()
 
-# Root
 app = App()
 
 
@@ -58,11 +57,12 @@ app.command("/chess", [matcher_factory("turn")])(turn)
 app.command("/chess", [matcher_factory("move")])(move)
 app.command("/chess", [matcher_factory("moves")])(moves)
 app.command("/chess", [matcher_factory("last")])(last)
-app.command("/chess", [matcher_factory("render")])(_render(app))  # hack
+app.command("/chess", [matcher_factory("render")])(_render)
 app.command("/chess", [matcher_factory("state")])(state)
 app.command("/chess", [matcher_factory("help")])(help)
 app.command("/chess")(help)
 
+# Diagnostic
 
 if __name__ == "__main__":
     SocketModeHandler(app, os.getenv("SLACK_APP_TOKEN")).start()
