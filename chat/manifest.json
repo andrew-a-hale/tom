@@ -4,6 +4,29 @@
         "description": "Chessboard Tracker",
         "background_color": "#389925"
     },
+    "features": {
+        "bot_user": {
+            "display_name": "Tom",
+            "always_online": false
+        },
+        "slash_commands": [
+            {
+                "command": "/hello",
+                "description": "Greeting",
+                "should_escape": false
+            }
+        ]
+    },
+    "oauth_config": {
+        "scopes": {
+            "bot": [
+                "commands",
+                "chat:write",
+                "files:read",
+                "files:write",
+            ]
+        }
+    },
     "settings": {
         "interactivity": {
             "is_enabled": true

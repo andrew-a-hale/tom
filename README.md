@@ -16,6 +16,7 @@ Tom is a Raspberry PI server.
       - state
       - render
     - diag
+      - temp
 - Chess -- Remote Chess Recorder
   - Track Game State
   - Notifications via Slack
