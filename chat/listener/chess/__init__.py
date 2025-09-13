@@ -1,18 +1,24 @@
+from typing import Callable
+
 from slack_bolt import App
+
 from .chess import (
-    matcher_factory,
-    start,
-    stop,
     fen,
     help,
-    turn,
-    move,
-    list_moves,
     last,
-    render,
+    list_moves,
     live,
+    move,
+    render,
+    start,
     state,
+    stop,
+    turn,
 )
+
+
+def matcher_factory(cmd: str) -> Callable[..., bool]:
+    return lambda body: body.get("text").startswith(cmd)
 
 
 def register(app: App):

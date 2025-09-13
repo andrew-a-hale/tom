@@ -11,10 +11,13 @@ Tom is a Raspberry PI server.
       - stop
       - fen
       - turn
-      - moves
+      - move
+      - list
       - last
       - state
       - render
+      - live
+      - help
     - diag
       - temp
 - Chess -- Remote Chess Recorder

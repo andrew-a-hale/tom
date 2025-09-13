@@ -2,7 +2,6 @@ import datetime
 import os
 import subprocess
 import time
-from typing import Callable
 
 import cairosvg
 from slack_bolt.request import BoltRequest
@@ -12,6 +11,8 @@ import chess.svg
 
 PATH = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 IMG_PATH = os.path.join(PATH, "images")
+
+# TODO: Class
 BOARD = chess.Board()
 MOVES = []
 WHITE_CAPTURE = []
@@ -23,8 +24,6 @@ VALUE_MAP = {
     chess.BISHOP: 3,
     chess.QUEEN: 9,
 }
-
-BOARD.set_board_fen("rnbqkbnr/pppp1ppp/8/4p3/3P4/8/PPP1PPPP/RNBQKBNR")
 
 
 def get_current_board():
@@ -40,10 +39,6 @@ def get_live_board():
     name = os.path.join(IMG_PATH, f"live_board_{ts}.jpg")
     subprocess.run(["rpicam-jpeg", "-o", name, "-t", "1"])
     return name
-
-
-def matcher_factory(cmd: str) -> Callable[..., bool]:
-    return lambda body: body.get("text").startswith(cmd)
 
 
 def start(ack, _):
