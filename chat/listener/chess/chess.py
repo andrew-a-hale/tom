@@ -38,7 +38,7 @@ def get_current_board():
 def get_live_board():
     ts = int(time.time())
     name = os.path.join(IMG_PATH, f"live_board_{ts}.jpg")
-    subprocess.Popen(["rpicam-jpeg", "-o", name, "-t", "10"])
+    subprocess.run(["rpicam-jpeg", "-o", name, "-t", "1"])
     return name
 
 
