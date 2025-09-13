@@ -1,12 +1,13 @@
 import datetime
-import os
 import subprocess
+import os
 import time
 from typing import Callable
-
-import cairosvg
 from slack_bolt.request import BoltRequest
 
+import cairosvg
+
+# from picamera2 import Picamer2, Preview
 import chess
 import chess.svg
 
@@ -35,10 +36,10 @@ def get_current_board():
     return name
 
 
-# TODO:
 def get_live_board():
+    ts = int(time.time())
     name = os.path.join(IMG_PATH, f"live_board_{ts}.png")
-    subprocess.Popen(["rpicam-"])
+    subprocess.Popen(["rpicam-jpeg", "-o", name])
     return name
 
 
