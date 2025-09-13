@@ -1,13 +1,12 @@
 import datetime
-import subprocess
 import os
+import subprocess
 import time
 from typing import Callable
-from slack_bolt.request import BoltRequest
 
 import cairosvg
+from slack_bolt.request import BoltRequest
 
-# from picamera2 import Picamer2, Preview
 import chess
 import chess.svg
 
