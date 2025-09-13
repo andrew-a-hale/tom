@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 
-from listener import chess
+from listener import chess, diagnostic
 
 logging.basicConfig(level=logging.DEBUG)
 load_dotenv()
@@ -26,6 +26,7 @@ def log_request(logger, body, next):
 
 
 chess.register(app)
+diagnostic.register(app)
 
 if __name__ == "__main__":
     SocketModeHandler(app, os.getenv("SLACK_APP_TOKEN")).start()
