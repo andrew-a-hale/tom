@@ -6,4 +6,4 @@ def get_temperature(ack):
         ["/usr/bin/vcgencmd", "measure_temp"],
         capture_output=True,
     )
-    ack(out)
+    ack(out.stdout.decode())
