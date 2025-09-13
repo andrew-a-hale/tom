@@ -113,13 +113,13 @@ def last(ack, _):
 
 
 def render(ack, say, req: BoltRequest):
+    ack()
     ts = datetime.datetime.now()
     file = req.context.client.files_upload_v2(
         file=get_current_board(),
         title=f"chessboard at {ts.strftime('%Y-%m-%d %H:%M:%S')}",
         alt_txt=f"chessboard at {ts.strftime('%Y-%m-%d %H:%M:%S')}",
     )
-    ack()
     say(
         channel=req.context.channel_id,
         text=file.get("file").get("permalink"),
@@ -127,13 +127,13 @@ def render(ack, say, req: BoltRequest):
 
 
 def live(ack, say, req: BoltRequest):
+    ack()
     ts = datetime.datetime.now()
     file = req.context.client.files_upload_v2(
         file=get_live_board(),
         title=f"chessboard at {ts.strftime('%Y-%m-%d %H:%M:%S')}",
         alt_txt=f"chessboard at {ts.strftime('%Y-%m-%d %H:%M:%S')}",
     )
-    ack()
     say(
         channel=req.context.channel_id,
         text=file.get("file").get("permalink"),
