@@ -11,18 +11,13 @@
         },
         "slash_commands": [
             {
-                "command": "/hello",
-                "description": "Greeting",
-                "should_escape": false
-            },
-            {
-                "command": "/goodbye",
-                "description": "Farewell",
-                "should_escape": false
-            },
-            {
                 "command": "/chess",
                 "description": "Chess Bot",
+                "should_escape": false
+            },
+            {
+                "command": "/diag",
+                "description": "Tom Diagnostic Bot",
                 "should_escape": false
             }
         ]
