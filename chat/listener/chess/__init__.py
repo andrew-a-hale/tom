@@ -9,8 +9,8 @@ from .chess import (
     move,
     list_moves,
     last,
-    _render,
-    _live,
+    render,
+    live,
     state,
 )
 
@@ -23,8 +23,8 @@ def register(app: App):
     app.command("/chess", [matcher_factory("list")])(list_moves)
     app.command("/chess", [matcher_factory("move")])(move)
     app.command("/chess", [matcher_factory("last")])(last)
-    app.command("/chess", [matcher_factory("render")])(_render(app))
-    app.command("/chess", [matcher_factory("live")])(_live(app))
+    app.command("/chess", [matcher_factory("render")])(render)
+    app.command("/chess", [matcher_factory("live")])(live)
     app.command("/chess", [matcher_factory("state")])(state)
     app.command("/chess", [matcher_factory("help")])(help)
     app.command("/chess")(help)

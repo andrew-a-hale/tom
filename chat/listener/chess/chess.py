@@ -1,13 +1,12 @@
 import datetime
-import subprocess
 import os
+import subprocess
 import time
 from typing import Callable
-from slack_bolt.request import BoltRequest
 
 import cairosvg
+from slack_bolt.request import BoltRequest
 
-# from picamera2 import Picamer2, Preview
 import chess
 import chess.svg
 
@@ -113,38 +112,32 @@ def last(ack, _):
     ack(f"The last played move was: {MOVES[-1]}")
 
 
-def _render(app):
-    def render(ack, say, req: BoltRequest):
-        ack()
-        ts = datetime.datetime.now()
-        file = app.client.files_upload_v2(
-            file=get_current_board(),
-            title=f"chessboard at {ts.strftime('%Y-%m-%d %H:%M:%S')}",
-            alt_txt=f"chessboard at {ts.strftime('%Y-%m-%d %H:%M:%S')}",
-        )
-        say(
-            channel=req.context.channel_id,
-            text=file.get("file").get("permalink"),
-        )
-
-    return render
+def render(ack, say, req: BoltRequest):
+    ts = datetime.datetime.now()
+    file = req.context.client.files_upload_v2(
+        file=get_current_board(),
+        title=f"chessboard at {ts.strftime('%Y-%m-%d %H:%M:%S')}",
+        alt_txt=f"chessboard at {ts.strftime('%Y-%m-%d %H:%M:%S')}",
+    )
+    ack()
+    say(
+        channel=req.context.channel_id,
+        text=file.get("file").get("permalink"),
+    )
 
 
-def _live(app):
-    def live(ack, say, req: BoltRequest):
-        ack()
-        ts = datetime.datetime.now()
-        file = app.client.files_upload_v2(
-            file=get_live_board(),
-            title=f"chessboard at {ts.strftime('%Y-%m-%d %H:%M:%S')}",
-            alt_txt=f"chessboard at {ts.strftime('%Y-%m-%d %H:%M:%S')}",
-        )
-        say(
-            channel=req.context.channel_id,
-            text=file.get("file").get("permalink"),
-        )
-
-    return live
+def live(ack, say, req: BoltRequest):
+    ts = datetime.datetime.now()
+    file = req.context.client.files_upload_v2(
+        file=get_live_board(),
+        title=f"chessboard at {ts.strftime('%Y-%m-%d %H:%M:%S')}",
+        alt_txt=f"chessboard at {ts.strftime('%Y-%m-%d %H:%M:%S')}",
+    )
+    ack()
+    say(
+        channel=req.context.channel_id,
+        text=file.get("file").get("permalink"),
+    )
 
 
 def advantage(white_pieces: list[chess.Piece], black_pieces: list[chess.Piece]) -> int:
