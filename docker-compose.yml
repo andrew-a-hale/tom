@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  chat:
+    build:
+      context: .
+      dockerfile: chat/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./chat:/tom/chat
+    networks:
+      - app_network
+
+  recognise:
+    build:
+      context: .
+      dockerfile: recognise/Dockerfile
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./recognise:/tom/recognise
+    networks:
+      - app_network
+
+  chesscog:
+    build:
+      context: ./chesscog
+      dockerfile: cpu.Dockerfile
+    ports:
+      - "8002:8002"
+      - "8888:8888"
+      - "9999:9999"
+    volumes:
+      - ./chesscog:/chesscog
+      - ./chesscog/config:/config
+      - ./chesscog/runs:/runs
+      - ./chesscog/results:/results
+      - ./chesscog/models:/models
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
