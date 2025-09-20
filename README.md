@@ -1,6 +1,6 @@
 # Tom
 
-Tom is a Raspberry PI server.
+Tom is a Raspberry PI server. This is a work in progress.
 
 ## Services
 
