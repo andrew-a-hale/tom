@@ -1,7 +1,8 @@
 # TODO
 
 - Chess Object Detection
-- Containerise
+  - Preprocess Image
+  - Use pretained model
 
 ## Hardware
 
