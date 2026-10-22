@@ -75,6 +75,7 @@ Then kill each process once and watch cron revive it within 2 min.
 ## Knobs
 
 Top of `petcam.sh`: capture/stream resolution, fps, bitrates.
-Top of `petcam-detect.py`: `MIN_CONF`, `ORANGE_*`/`GRAY_*` (calibrated against
-both cats 2026-10-22 — willow 0.06 vs pancake 0.62–0.69 at `ORANGE_MIN_SAT=80`),
+Top of `petcam-detect.py`: `MIN_CONF`, `ORANGE_*`/`GRAY_MAX_SAT` (recalibrated 2026-10-22
+over 113 hand-labeled boxes, bright to dim light — orange fraction alone separates
+the cats: pancake 0.27–0.75 vs willow 0.00–0.10, threshold `ORANGE_FRAC=0.18` in the gap),
 `MOTION_*`, `HEARTBEAT_S`, `KEEP_PER_CAT`, `THROTTLE_S`, `LOG_KEEP_DAYS`.

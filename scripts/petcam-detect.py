@@ -31,20 +31,20 @@ NAME = {"gray": "willow", "orange": "pancake"}  # coat label -> cat
 KEEP_PER_CAT = 1    # per label: newest 1 kept (newest = "latest")          # detection confidence (knob: raise if furniture gets "detected")
 INPUT = 640             # YOLO input size
 CAT = 15                # COCO class index of "cat"
-# Calibrated 2026-10-22 against both cats in warm room light:
-#   willow  (gray)   orange@80=0.06, gray@80=0.92
-#   pancake (orange) orange@80=0.62-0.69, gray@80=0.29-0.36
+# Calibrated 2026-10-22 over 113 hand-labeled boxes, bright room light to dim night:
+#   pancake orange=0.27-0.75, willow orange=0.00-0.10 -> orange fraction alone
+#   separates the cats; threshold sits in the gap. (The old gray-fraction rule
+#   called dim-light willow "unknown" at gray 0.38<0.5, so her shot went stale.)
 ORANGE_MIN_SAT = 80     # HSV 0-255: pixels below this saturation cant be orange
-ORANGE_FRAC = 0.25      # box fraction needed to call it orange
-GRAY_MAX_SAT = 80       # HSV 0-255: below this saturation counts as gray fur
-GRAY_FRAC = 0.5
+ORANGE_FRAC = 0.18      # box fraction of orange fur -> pancake; below -> willow
+GRAY_MAX_SAT = 80       # HSV 0-255: below this saturation counts as gray fur (logged only)
 MOTION_DELTA = 25       # gray-level diff that counts as movement
 MOTION_MIN_PX = 500     # ignore sensor noise / tiny leaves
 HEARTBEAT_S = 60        # full YOLO pass at least this often (sleeping cats)
 
 
 def classify(box):
-    """orange / gray / unknown from a fur-color histogram of the cropped box."""
+    """orange / gray from a fur-colour histogram of the cropped box."""
     hsv = cv2.cvtColor(box, cv2.COLOR_BGR2HSV)
     h, s, v = hsv[..., 0], hsv[..., 1], hsv[..., 2]
     visible = v > 40
@@ -53,9 +53,7 @@ def classify(box):
     gray = int(((s < GRAY_MAX_SAT) & visible).sum()) / n
     if orange > ORANGE_FRAC:
         return "orange", orange, gray
-    if gray > GRAY_FRAC:
-        return "gray", orange, gray
-    return "unknown", orange, gray
+    return "gray", orange, gray     # two-cat house: not orange -> willow
 
 
 last_harvest = 0.0
@@ -228,7 +226,7 @@ def pass_once(net):
     keep = []
     for b in boxes:
         cat, orf, grf = classify(img[b[1]:b[3], b[0]:b[2]])
-        log_raw(f"classify orange={orf:.2f}/{ORANGE_FRAC} sat>={ORANGE_MIN_SAT} gray={grf:.2f}/{GRAY_FRAC} sat<{GRAY_MAX_SAT} -> {cat}")
+        log_raw(f"classify orange={orf:.2f}/{ORANGE_FRAC} gray={grf:.2f} -> {cat}")
         cat = NAME.get(cat, cat)
         if throttle_ok(cat, now):
             labels.append(cat)
@@ -270,7 +268,7 @@ def selftest():
     black = np.zeros((100, 100, 3), np.uint8)                     # dark -> nothing visible
     assert classify(orange)[0] == "orange", classify(orange)
     assert classify(gray)[0] == "gray", classify(gray)
-    assert classify(black)[0] == "unknown", classify(black)
+    assert classify(black)[0] == "gray", classify(black)   # dark box: not orange -> gray
     net = cv2.dnn.readNet(MODEL)
     assert detect(net, np.full((480, 640, 3), 114, np.uint8)) == []
     # harvest must receive the FULL frame paired with full-frame boxes (bug: crop+full coords)
