@@ -1,0 +1,13 @@
+# VPN health check: kill protonvpn if it blocks internet
+*/5 * * * * ip link show protonvpn >/dev/null 2>&1 && ! ping -c 1 -W 5 8.8.8.8 >/dev/null 2>&1 && sudo wg-quick down protonvpn 2>/dev/null
+# Watchdogs (every 2 min). pgrep -f patterns are name-anchored/bracketed so the sh -c
+# wrapper cannot match itself; pgrep -x matches process NAME only.
+# Absolute paths: crons PATH lacks /usr/local/bin (cloudflared lives there).
+*/2 * * * * pgrep -x andrewhale-web >/dev/null 2>&1 || (cd /home/tom/projects/andrewahale.com/web && nohup ./andrewhale-web > /tmp/andrewhale-web.log 2>&1 &)
+*/2 * * * * pgrep -x cloudflared >/dev/null 2>&1 || nohup /usr/local/bin/cloudflared tunnel run andrewahale > /tmp/cloudflared.log 2>&1 &
+*/2 * * * * pgrep -f "petca[m].sh$" >/dev/null 2>&1 || nohup /home/tom/petca[m].sh >/tmp/petcam.log 2>&1 &
+*/2 * * * * pgrep -f "petcam-detect[.]py$" >/dev/null 2>&1 || nohup python3 /home/tom/petcam-detect.py >/tmp/petcam-detect.log 2>&1 &
+@reboot cd /home/tom/projects/andrewahale.com/web && ./andrewhale-web &
+@reboot /usr/local/bin/cloudflared tunnel run andrewahale &
+@reboot /home/tom/petcam.sh >/tmp/petcam.log 2>&1 &
+@reboot python3 /home/tom/petcam-detect.py >/tmp/petcam-detect.log 2>&1 &

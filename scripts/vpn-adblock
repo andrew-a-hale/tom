@@ -1,0 +1,78 @@
+#!/bin/bash
+# vpn-adblock [setup|update|on|off|status]
+# Manage ad-blocking DNS (dnsmasq) on the Pi VPN gateway.
+# setup: push the installer to the Pi and (re)install; other actions run it remotely.
+set -euo pipefail
+
+HOST="${VPN_PI_HOST:-raspberrypi}"
+REMOTE=/usr/local/bin/vpn-adblock
+
+if [[ "${1:-status}" == "setup" ]]; then
+  ssh -o ConnectTimeout=8 "$HOST" sudo tee "$REMOTE" >/dev/null <<'PI'
+#!/bin/bash
+# Pi-side ad-blocking DNS for VPN gateway clients. Managed from the desktop by `vpn adblock`.
+set -euo pipefail
+LIST_URL="https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
+LIST_FILE="/etc/dnsmasq-adblock.hosts"   # outside /etc/dnsmasq.d — dnsmasq parses every file there as config
+CONF_FILE="/etc/dnsmasq.d/adblock.conf"
+
+update_list() {
+  local tmp; tmp=$(mktemp)
+  curl -fsSL "$LIST_URL" | awk '$1=="0.0.0.0"{print $1, $2}' >"$tmp"
+  install -m 0644 "$tmp" "$LIST_FILE"; rm -f "$tmp"
+  systemctl reload dnsmasq 2>/dev/null || true
+}
+install_updater() {
+  cat >/etc/systemd/system/adblock-update.service <<'UNIT'
+[Unit]
+Description=Refresh ad-block DNS hosts list
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/vpn-adblock update
+UNIT
+  cat >/etc/systemd/system/adblock-update.timer <<'UNIT'
+[Unit]
+Description=Daily ad-block DNS hosts refresh
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=1h
+Persistent=true
+[Install]
+WantedBy=timers.target
+UNIT
+  systemctl daemon-reload
+  systemctl enable --now adblock-update.timer >/dev/null
+}
+status() {
+  printf 'dnsmasq:       %s\n' "$(systemctl is-active dnsmasq)"
+  printf 'blocked hosts: %s\n' "$(wc -l <"$LIST_FILE" 2>/dev/null || echo 0)"
+  printf 'updater timer: %s\n' "$(systemctl is-active adblock-update.timer)"
+}
+case "${1:-status}" in
+  setup)
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq dnsmasq >/dev/null
+    cat >"$CONF_FILE" <<'CONF'
+# Managed by vpn-adblock — ad filtering for LAN + WireGuard gateway clients
+no-resolv
+server=9.9.9.9
+server=1.1.1.1
+addn-hosts=/etc/dnsmasq-adblock.hosts
+CONF
+    update_list
+    systemctl enable --now dnsmasq >/dev/null
+    systemctl restart dnsmasq
+    install_updater
+    status ;;
+  update) update_list ;;
+  on)  systemctl start dnsmasq ;;
+  off) systemctl stop dnsmasq ;;
+  status) status ;;
+  *) echo "usage: vpn-adblock {setup|update|on|off|status}" >&2; exit 2 ;;
+esac
+PI
+  ssh -o ConnectTimeout=8 "$HOST" sudo chmod +x "$REMOTE"
+fi
+
+exec ssh -o ConnectTimeout=8 "$HOST" sudo "$REMOTE" "$@"
