@@ -68,7 +68,9 @@ Then kill each process once and watch cron revive it within 2 min.
   `THROTTLE_S` per label). Shared with the web app: deleting a shot resets that
   label's entry so the next sighting re-shoots immediately.
 - Training data (half-built, see `docs/website/README.md`): `~/petcam/training/`
-  auto pseudo-labels (YOLO txt) + `~/petcam/tolabel/` near-miss frames.
+  auto pseudo-labels (YOLO txt) + `~/petcam/tolabel/` near-miss frames —
+  label the queue on the site at `/label` (approve/draw/reject + cat name),
+  `petcam-detect.py --checknames` regression-checks the hue classifier.
 
 ## Knobs
 

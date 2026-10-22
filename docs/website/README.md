@@ -100,16 +100,27 @@ What the detector collects (`harvest()` / `save()` in `~/petcam-detect.py`):
   detection: clean frame (no boxes drawn) + YOLO txt (`0 cx cy w h`,
   normalized, class 0 = cat). Free pseudo-labels.
 - `~/petcam/tolabel/` — near-miss frames (0.1 <= top score < MIN_CONF 0.4),
-  max one per 2 min, score in the filename. These need HAND-DRAWN boxes.
+  max one per 2 min. Sidecar txt = YOLO proposal box + hue-classifier name
+  proposal. Label them **on the site (`/label`)**: approve (proposal or dragged
+  box), name it (cat/willow/pancake), or reject — saves land in `training/`
+  as YOLO pairs with the name in the filename. `--checknames` on the detector
+  = regression check of the hue classifier against the hand-named crops.
 
-To continue later:
-1. Label the `tolabel` images (delete non-cat frames): Roboflow web app or
-   `labelme` on the desktop, export YOLO format.
+To continue later (retraining is manual and deliberate — see "When to
+retrain" below):
+1. Label the `tolabel` images on the site (`/label`) — approve / draw / reject,
+   name the cat when obvious.
 2. Merge with `training/`, train/val split, `data.yaml`.
 3. Colab: `yolo detect train model=yolov8n.pt data=data.yaml epochs=50 imgsz=640`
    then `yolo export format=onnx`.
 4. `scp` the ONNX to `~/petcam/model/yolov8n.onnx`, restart the detector. The
    decoder auto-detects a 1-class model output — no code change needed.
+
+When to retrain: once the `/label` queue is worked through and real misses
+remain (curled-cat ceiling), with ~50–200 labeled boxes. Never automatic —
+the quality gate is `--checknames` + a gallery check before accepting the
+swap. This is supervised fine-tuning with active-learning data collection
+(uncertainty sampling + pseudo-labels), not reinforcement learning.
 
 Half-baked edges to finish later: no dedupe (near-identical near-miss frames
 pile up), no size cap on either folder, the 0.1–0.4 band and 2 min throttle
