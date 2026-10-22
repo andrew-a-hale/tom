@@ -1,0 +1,14 @@
+[Unit]
+Description=DHT12 office temp/humidity -> web/static/dht.json
+After=dev-ttyUSB0.device
+Requisite=dev-ttyUSB0.device
+
+[Service]
+User=tom
+Group=dialout
+ExecStart=/home/tom/projects/dht/dht_daemon /dev/ttyUSB0 /home/tom/projects/andrewahale.com/web/static/dht.json
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

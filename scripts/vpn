@@ -5,10 +5,11 @@ home)
   sudo wg-quick down protonvpn 2>/dev/null
   protonvpn disconnect 2>/dev/null
   sudo resolvconf -u 2>/dev/null
-  sudo wg-quick up wg-pi
+  ip link show wg-pi >/dev/null 2>&1 || sudo wg-quick up wg-pi
   # ponytail: fail-open guard — Pi's Proton cert expires ~weekly; without this
   # home mode silently exits via the home ISP instead of via Proton
-  AGE=$(ssh -o ConnectTimeout=8 tom 'sudo wg show protonvpn latest-handshakes' 2>/dev/null | awk '{print $2}' | head -1)
+  TS=$(ssh -o ConnectTimeout=8 tom 'sudo wg show protonvpn latest-handshakes' 2>/dev/null | awk '{print $2}' | head -1)
+  AGE=$(( $(date +%s) - ${TS:-0} ))
   if [[ -z ${AGE:-} || ${AGE:-999999} -gt 180 ]]; then
     echo "WARN: Pi's Proton tunnel is down/stale — traffic is exiting via the home ISP. Run vpn-sync-pi."
     exit 1

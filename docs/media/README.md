@@ -7,7 +7,7 @@ Serve media from the homelab to the TV. **Working end-to-end since 2026-10-21.**
 | Piece | What | Status |
 |---|---|---|
 | Server | Jellyfin 12.2 on Pi `tom` (Raspberry Pi 5, 8GB), Debian package from repo.jellyfin.org, systemd unit `jellyfin` (enabled at boot) | Running |
-| Library | `/mnt/storage/media/{movies,tv,music}` — WD Elements 1TB NTFS drive, fstab-mounted at `/mnt/storage` by PARTUUID. Stopgap until the 2TB SSD. Holds: 3 movies + Ghost in the Shell S.A.C (54 eps, 2 seasons + Specials, from OZC rips — Jellyfin parses the `E01 'Title'` names natively). NOTE: NTFS volume root was read-only until `chmod u+w /mnt/storage` (Windows attr carry-over) | Live |
+| Library | `/mnt/storage/media/{movies,tv,music}` — **NFS from jason** (temporary, 2026-10-22): the Pi's WD Elements 1TB died ("Unit Not Ready" at boot) and its contents were abandoned; the Pi now NFSv4-mounts jason's internal 1.8T disk at the same `/mnt/storage` path (fstab `192.168.1.181:/mnt/storage nfs vers=4,nolock,nofail,...`; jason UFW allows 2049/tcp from the Pi; `/etc/exports` on jason). Mount the 2TB SSD at `/mnt/storage` the same way (same path = zero config changes) and drop the fstab NFS line. Holds: Mulholland Drive + Twin Peaks S01 (downloading) | Live |
 | Access (LAN) | **`http://tom.local/jf`** (nginx reverse proxy on the Pi, subpath mode via Jellyfin `BaseUrl=/jf`; `tom.local` = mDNS from avahi) | Working |
 | qBittorrent WebUI | **`http://tom.local/bt`** — basic auth: `andy` / `homelab` (change it!). Direct API stays loopback-only for the `grab` scripts | Working |
 | TV client | **Laptop + HDMI, Jellyfin web app** — pending Google TV Streamer (TODO) | Working |

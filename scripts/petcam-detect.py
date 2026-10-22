@@ -28,7 +28,7 @@ THROTTLE_FILE = "/dev/shm/petcam/throttle.json"
 THROTTLE_S = 600        # one shot per label per 10 min (no 500 photos of a napping cat)
 MIN_CONF = 0.4
 NAME = {"gray": "willow", "orange": "pancake"}  # coat label -> cat
-KEEP_PER_CAT = 10   # per label: newest 10 kept (newest = "latest")          # detection confidence (knob: raise if furniture gets "detected")
+KEEP_PER_CAT = 1    # per label: newest 1 kept (newest = "latest")          # detection confidence (knob: raise if furniture gets "detected")
 INPUT = 640             # YOLO input size
 CAT = 15                # COCO class index of "cat"
 # Calibrated 2026-10-22 against both cats in warm room light:
@@ -83,15 +83,16 @@ def harvest(img, top, box=None):
 def detect(net, img, roi=None):
     """cat boxes (x1, y1, x2, y2). roi=(x, y, w, h) zooms one pass on that region."""
     ox = oy = 0
+    crop = img  # full frame kept: harvest saves it paired with full-frame boxes
     if roi:
         x, y, w, h = roi
         ox, oy = max(x - w // 4, 0), max(y - h // 4, 0)   # pad what moved
         w = min(w * 2, img.shape[1] - ox)
         h = min(h * 2, img.shape[0] - oy)
-        img = img[oy:oy + h, ox:ox + w]
-    h, w = img.shape[:2]
+        crop = img[oy:oy + h, ox:ox + w]
+    h, w = crop.shape[:2]
     scale = INPUT / max(h, w)
-    resized = cv2.resize(img, (int(w * scale), int(h * scale)))
+    resized = cv2.resize(crop, (int(w * scale), int(h * scale)))
     canvas = np.full((INPUT, INPUT, 3), 114, np.uint8)
     canvas[:resized.shape[0], :resized.shape[1]] = resized
     blob = cv2.dnn.blobFromImage(canvas, 1 / 255.0, (INPUT, INPUT), swapRB=True)
@@ -270,7 +271,15 @@ def selftest():
     assert classify(orange)[0] == "orange", classify(orange)
     assert classify(gray)[0] == "gray", classify(gray)
     assert classify(black)[0] == "unknown", classify(black)
-    assert detect(cv2.dnn.readNet(MODEL), np.full((480, 640, 3), 114, np.uint8)) == []
+    net = cv2.dnn.readNet(MODEL)
+    assert detect(net, np.full((480, 640, 3), 114, np.uint8)) == []
+    # harvest must receive the FULL frame paired with full-frame boxes (bug: crop+full coords)
+    cap = []
+    real_harvest = harvest
+    globals()["harvest"] = lambda i, t, b=None: cap.append((i.shape[:2], b))
+    detect(net, np.full((480, 640, 3), 114, np.uint8), roi=(100, 100, 200, 200))
+    globals()["harvest"] = real_harvest
+    assert cap and cap[0][0] == (480, 640), f"harvest got cropped frame {cap}"
     a = np.full((120, 160), 30, np.uint8)
     b = a.copy(); b[40:70, 50:90] = 200
     x, y, w, h = motion_region(a, b)

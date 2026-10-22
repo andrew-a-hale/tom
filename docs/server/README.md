@@ -43,9 +43,11 @@ User decision — it's a gaming rig. Also the most expensive option per year.
 ## Migration plan (started 2026-10-21 on the Elements drive)
 
 1. ~~SSD → ext4, systemd mount~~ **done differently**: the Elements 1TB (NTFS)
-   is fstab-mounted at `/mnt/storage` (PARTUUID) — same path as the desktop, so
-   the copied Jellyfin config needed zero edits. ext4 still happens when the
-   2TB SSD arrives.
+   was fstab-mounted at `/mnt/storage` (PARTUUID) — same path as the desktop, so
+   the copied Jellyfin config needed zero edits. **The drive died 2026-10-22**
+   ("Unit Not Ready", contents abandoned); `/mnt/storage` is now an NFSv4 mount
+   of jason's internal disk (see docs/media/README.md). The 2TB SSD mounts at
+   the same path when it arrives — one fstab line swap, zero config edits.
 2. ~~rsync library + jellyfin config → Pi, install jellyfin~~ **done**:
    3GB library + config (user, libraries, DLNA plugin) live on the Pi,
    `http://192.168.1.24:8096`, unit `jellyfin` enabled at boot.

@@ -1,52 +1,81 @@
 # Backups
 
-rclone → Proton Drive. **Verified working 2026-10-21** — both syncs
-match remote exactly (0 differences on `rclone check --one-way`).
+Two syncs, both to Proton Drive.
 
 ## What syncs
 
-| Local | Remote | Schedule |
-|---|---|---|
-| `/mnt/storage/backup/` (Andrew/, Photos/, callum-backup/ — 384 files) | `proton:/backup` | weekly Mon 00:00 (`rclone-backup.timer`) |
-| `/home/andy/Documents/` (95 files) | `proton:/documents` | `rclone-docs.service` — always-on, re-runs with 5-min retry, incremental (skips if nothing newer than `/home/andy/last-sync`) |
+| Local | Remote | How | Schedule |
+|---|---|---|---|
+| `/mnt/storage/backup/` (Andrew/, Photos/, callum-backup/ — 384 files, 389MB) | `proton:/backup` | **Official Proton Drive CLI** (`proton-drive`, v0.9.0) — migrated 2026-10-22, see [complete/proton-cli-migration-2026-10-22.md](complete/proton-cli-migration-2026-10-22.md) | weekly Mon 00:00 (`protondrive-backup.timer`) |
+| `/home/andy/Documents/` (95 files) | `proton:/documents` → `/my-files/Documents` | **Official Proton Drive CLI** (`protondrive-documents.service`, 5-min retry loop; `~/last-sync` + `fd --newer` guard skips the API when nothing changed) — migrated 2026-10-22, see [complete/proton-cli-migration-2026-10-22.md](complete/proton-cli-migration-2026-10-22.md) | always-on |
 
-## Layout
+## The syncs (official CLI)
 
-- Units + scripts: `/home/andy/services/` (system units, `rclone-backup.timer`
-  → `rclone-weekly.sh`, and `rclone-docs.service` → `rclone-documents.sh`)
-- `rclone-backup.service` runs as `andy` (changed 2026-10-21 from root) — all
-  auth in the one `~/.config/rclone/rclone.conf`
-- Remote: `[proton]` = protondrive backend, **username/password/2FA auth** (not
-  OAuth — `rclone config reconnect` doesn't work on this backend)
-- Docs sync keeps `/home/andy/last-sync` as the incremental marker
+- CLI: `~/.local/bin/proton-drive` (linux-x64, from proton.me/download/drive/cli).
+  ARM build exists for the Pi if this ever moves there.
+- Units + scripts: `/home/andy/services/` — weekly: `protondrive-backup.timer`
+  → `protondrive-backup.service` → `protondrive-weekly.sh`; documents:
+  `protondrive-documents.service` (5-min `Restart=always` poll) →
+  `protondrive-documents.sh`
+- Command shape (both): `filesystem upload -f create-new-revision -d merge
+  <local-folder> /my-files` — uploads the folder into the `/my-files` root
+  where it merges with the existing folder of the same name (careful:
+  uploading a folder *into* its own parent folder nests it — a direct
+  `... /my-files/backup` would make `backup/backup`). Changed/new files only
+  (same-content files skipped automatically), **never deletes remote** (rclone
+  `sync` used to mirror deletions — deleted local docs now stay on Drive).
+  Changed files keep old revisions (Proton-side history). Remote Drive paths
+  are virtual: user content lives under `/my-files`, not `/`. Remote folders
+  were renamed `backup`/`documents` → `backup`/`Documents` to match local
+  names for the merge.
+- Documents sync keeps its old `~/last-sync` + `fd --newer` guard purely to
+  avoid API chatter when nothing changed (verified both branches
+  2026-10-22: forced pass content-skips all 136 items, guard path runs in 9ms
+  with no API call).
+- Verify after a run: `proton-drive filesystem size /my-files/backup` vs
+  `du -s /mnt/storage/backup` (should roughly match; 2026-10-22 first run:
+  415MB / 428 descendants remote vs 407MB local).
 
-## When it breaks (it did — for over a year)
+### Auth / session
 
-Symptom: `422 POST .../auth/v4/2fa: Incorrect login credentials` in
-`journalctl -u rclone-backup.service`. The stored protondrive login tokens die
-eventually (last success Sep 2025; silently failing weekly since). Timers don't
-email you — check with:
+- Login is browser-based, once per session lifetime:
+  `proton-drive auth login` (opens account.proton.me — password + 2FA never
+  touch the command line).
+- Session token is stored in a **dedicated pass store**
+  (`~/.password-store-proton`, `PROTON_DRIVE_CREDENTIALS_STORE=pass`) with its
+  own **passphrase-less GPG key** (`proton-drive-backup (session token only)`,
+  rsa3072, fpr `7681EBF0...`). Why not the default keychain: the timer runs at
+  Mon 00:00 headless — libsecret needs an unlocked GUI session and the main
+  GPG key is passphrase-protected. Why a passphrase-less key is acceptable
+  here: it guards a single Drive session token, on a LUKS-encrypted disk;
+  tradeoff accepted deliberately. Veto by switching the timer to `keychain`
+  and running it as a `--user` unit while logged in.
+- When the session dies (Proton-side expiry/logout), the weekly run fails in
+  the journal with an auth error → re-run `auth login` with the same two env
+  vars (`PROTON_DRIVE_CREDENTIALS_STORE=pass`,
+  `PASSWORD_STORE_DIR=/home/andy/.password-store-proton`) — put them in your
+  shell or the login lands in the wrong store.
 
-```
-systemctl list-timers rclone-backup.timer
-rclone check /mnt/storage/backup/ proton:/backup --one-way
-```
+## When it breaks
 
-Fix: `rclone config` → `e` → `proton` → re-enter password + **fresh** 2FA code
-(one-time — don't reuse). Then run the weekly script once to confirm.
+Symptom: `protondrive-backup.service` fails in `journalctl -u
+protondrive-backup.service`. Check in order:
 
-Also: protondrive syncs need `--protondrive-replace-existing-draft=true` or
-they die with "A file or folder with that name already exists" (422/2500) —
-that flag is in `rclone-weekly.sh` now, add it to any new protondrive command.
+1. Auth: run `~/.local/bin/proton-drive filesystem list /my-files/backup` with the two
+   env vars set. If it asks to log in → re-auth as above.
+2. Disk: `/mnt/storage` is currently jason's internal disk (the media Pi's
+   NFS source). If the backup and the Pi's media both vanish, look at mounts.
+3. GPG: the dedicated key must be importable without pinentry. It has no
+   passphrase; if a future restore of `~/.gnupg` re-adds one, headless runs
+   break.
 
-## Notes / ceilings
+## History
 
-- Photos/Andrew live on the same 2TB disk that the media library will grow on —
-  one-disk, offsite = Proton Drive only. The disk dying means local + remote
-  copies only exist at Proton. Acceptable until the media disk fills; revisit
-  then.
-- `proton:backup` and `proton:documents` are plain sync (latest state), not
-  versioned snapshots — a local rm + a sync run = data gone. rclone bisync or
-  `--backup-dir` if this ever needs history.
-- `/home/andy/services/` unit files + scripts are outside this repo — same
-  move-to-repo treatment as `vpn/` applies when touching them next.
+- rclone + protondrive backend ran weekly from ~2023 and **silently failed
+  from Sep 2025** on dead 2FA tokens (`422 /auth/v4/2fa`), timers don't email.
+  Discovered during the Oct 2026 homelab work, tokens re-authed 2026-10-21,
+  then migrated to the official CLI the next day anyway (this file's git
+  history has the old rclone runbook). The old
+  `rclone check /mnt/storage/backup/ proton:/backup --one-way` one-liner is
+  gone with the migration; `filesystem size` is the replacement.
+- Migration + rationale: [complete/proton-cli-migration-2026-10-22.md](complete/proton-cli-migration-2026-10-22.md)

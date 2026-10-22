@@ -60,7 +60,7 @@ Then kill each process once and watch cron revive it within 2 min.
 ## Data contract
 
 - Shots: `~/petcam/shots/YYYY-MM-DD_HH-MM-SS_<cat>.jpg` — the filename is the
-  whole gallery contract (timestamp + label). Newest 10 kept per cat.
+  whole gallery contract (timestamp + label). Newest 1 kept per cat.
 - Log: `~/petcam/detections.log` — one timestamped line per processing pass
   (scan scores vs threshold, classifier fracs vs thresholds, saved/throttled).
   Rolling 2-week window. `/log` shows it newest-first, 200 lines/page.
