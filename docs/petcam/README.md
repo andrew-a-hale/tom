@@ -64,6 +64,9 @@ Then kill each process once and watch cron revive it within 2 min.
 - Log: `~/petcam/detections.log` — one timestamped line per processing pass
   (scan scores vs threshold, classifier fracs vs thresholds, saved/throttled).
   Rolling 2-week window. `/log` shows it newest-first, 200 lines/page.
+- Throttle: `/dev/shm/petcam/throttle.json` — detector state (label → unix ts,
+  `THROTTLE_S` per label). Shared with the web app: deleting a shot resets that
+  label's entry so the next sighting re-shoots immediately.
 - Training data (half-built, see `docs/website/README.md`): `~/petcam/training/`
   auto pseudo-labels (YOLO txt) + `~/petcam/tolabel/` near-miss frames.
 
@@ -71,5 +74,5 @@ Then kill each process once and watch cron revive it within 2 min.
 
 Top of `petcam.sh`: capture/stream resolution, fps, bitrates.
 Top of `petcam-detect.py`: `MIN_CONF`, `ORANGE_*`/`GRAY_*` (calibrated against
-Willow's coat 2026-10-22), `MOTION_*`, `HEARTBEAT_S`, `KEEP_PER_CAT`,
-`THROTTLE_S`, `LOG_KEEP_DAYS`.
+both cats 2026-10-22 — willow 0.06 vs pancake 0.62–0.69 at `ORANGE_MIN_SAT=80`),
+`MOTION_*`, `HEARTBEAT_S`, `KEEP_PER_CAT`, `THROTTLE_S`, `LOG_KEEP_DAYS`.
