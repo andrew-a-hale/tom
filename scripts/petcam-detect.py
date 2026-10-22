@@ -31,7 +31,10 @@ NAME = {"gray": "willow", "orange": "pancake"}  # coat label -> cat
 KEEP_PER_CAT = 10   # per label: newest 10 kept (newest = "latest")          # detection confidence (knob: raise if furniture gets "detected")
 INPUT = 640             # YOLO input size
 CAT = 15                # COCO class index of "cat"
-ORANGE_MIN_SAT = 120     # HSV 0-255: pixels below this saturation cant be orange
+# Calibrated 2026-10-22 against both cats in warm room light:
+#   willow  (gray)   orange@80=0.06, gray@80=0.92
+#   pancake (orange) orange@80=0.62-0.69, gray@80=0.29-0.36
+ORANGE_MIN_SAT = 80     # HSV 0-255: pixels below this saturation cant be orange
 ORANGE_FRAC = 0.25      # box fraction needed to call it orange
 GRAY_MAX_SAT = 80       # HSV 0-255: below this saturation counts as gray fur
 GRAY_FRAC = 0.5
@@ -58,8 +61,8 @@ def classify(box):
 last_harvest = 0.0
 
 
-def harvest(img, top):
-    """keep near-miss frames (0.1 <= top < MIN_CONF) for hand labeling"""
+def harvest(img, top, box=None):
+    """keep near-miss frames (0.1 <= top < MIN_CONF) + YOLO proposal box, for /label"""
     global last_harvest
     if not (0.1 <= top < MIN_CONF):
         return
@@ -69,7 +72,12 @@ def harvest(img, top):
     last_harvest = now
     os.makedirs(TOLABEL, exist_ok=True)
     ts = time.strftime("%Y-%m-%d_%H-%M-%S")
-    cv2.imwrite(os.path.join(TOLABEL, f"{ts}_top={top:.2f}.jpg"), img)
+    stem = os.path.join(TOLABEL, f"{ts}_top={top:.2f}")
+    cv2.imwrite(stem + ".jpg", img)
+    if box:
+        name = NAME.get(classify(img[max(box[1], 0):box[3], max(box[0], 0):box[2]])[0], "unknown")
+        with open(stem + ".txt", "w") as f:
+            f.write(" ".join(str(v) for v in box) + " " + name + "\n")   # box + name proposal
 
 
 def detect(net, img, roi=None):
@@ -93,7 +101,10 @@ def detect(net, img, roi=None):
     top = float(scores.max()) if scores.size else 0.0
     src = "full" if roi is None else "motion=" + ",".join(str(v) for v in roi)
     log_raw(f"scan {src} top={top:.2f} min={MIN_CONF}")
-    harvest(img, top)
+    if scores.size:
+        cx, cy, bw, bh = preds[int(scores.argmax()), :4]
+        harvest(img, top, (ox + int((cx - bw / 2) / scale), oy + int((cy - bh / 2) / scale),
+                           ox + int((cx + bw / 2) / scale), oy + int((cy + bh / 2) / scale)))
     keep = np.where(scores >= MIN_CONF)[0]
     boxes, confs = [], []
     for i in keep:
@@ -227,6 +238,31 @@ def pass_once(net):
         save(img, keep, labels)
 
 
+def checknames():
+    """regression check: does the hue classifier agree with hand names in training/?"""
+    ok = bad = 0
+    for f in sorted(os.listdir(TRAIN_IMG)):
+        if not f.endswith(".jpg"):
+            continue
+        stem = f[:-4]
+        want = next((n for n in NAME.values() if stem.endswith("_" + n)), None)
+        if want is None:
+            continue
+        fields = open(os.path.join(TRAIN_LBL, stem + ".txt")).read().split()
+        x, y, w, h = (float(v) for v in fields[1:5])
+        img = cv2.imread(os.path.join(TRAIN_IMG, f))
+        H, W = img.shape[:2]
+        crop = img[max(int((y - h / 2) * H), 0):int((y + h / 2) * H),
+                   max(int((x - w / 2) * W), 0):int((x + w / 2) * W)]
+        got = NAME.get(classify(crop)[0], "unknown")
+        if got == want:
+            ok += 1
+        else:
+            bad += 1
+            print(f"checknames {stem}: want {want} got {got}", flush=True)
+    print(f"checknames: {ok} ok, {bad} wrong", flush=True)
+
+
 def selftest():
     orange = np.full((100, 100, 3), (0, 140, 255), np.uint8)      # BGR orange fur
     gray = np.full((100, 100, 3), (128, 128, 128), np.uint8)      # gray fur
@@ -243,15 +279,22 @@ def selftest():
     import tempfile
     d = tempfile.mkdtemp()
     old = SHOTS, TRAIN_IMG, TRAIN_LBL, LOG
-    globals().update({"SHOTS": d, "TRAIN_IMG": d, "TRAIN_LBL": d, "LOG": os.path.join(d, "detlog")})
+    globals().update({"SHOTS": d, "TRAIN_IMG": d, "TRAIN_LBL": d, "LOG": os.path.join(d, "detlog"),
+                      "TOLABEL": d, "last_harvest": 0.0})
+    harvest(np.full((100, 100, 3), 100, np.uint8), 0.3, (10, 10, 50, 50))
+    side = [f for f in os.listdir(d) if f.endswith("_top=0.30.txt")]
+    assert side and open(os.path.join(d, side[0])).read().startswith("10 10 50 50 "), os.listdir(d)
     save(np.full((200, 100, 3), 100, np.uint8), [(0, 0, 50, 100)], ["gray"])
-    txts = [f for f in os.listdir(d) if f.endswith(".txt")]
+    txts = [f for f in os.listdir(d) if f.endswith(".txt") and "_top=" not in f]
     assert len(txts) == 1 and open(os.path.join(d, txts[0])).read().startswith("0 0.25"), os.listdir(d)
     globals().update({"SHOTS": old[0], "TRAIN_IMG": old[1], "TRAIN_LBL": old[2], "LOG": old[3]})
     print("selftest ok")
 
 
 if __name__ == "__main__":
+    if "--checknames" in sys.argv:
+        checknames()
+        sys.exit(0)
     if "--selftest" in sys.argv:
         selftest()
         sys.exit(0)
