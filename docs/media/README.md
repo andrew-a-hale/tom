@@ -7,7 +7,7 @@ Serve media from the homelab to the TV. **Working end-to-end since 2026-10-21.**
 | Piece | What | Status |
 |---|---|---|
 | Server | Jellyfin 12.2 on Pi `tom` (Raspberry Pi 5, 8GB), Debian package from repo.jellyfin.org, systemd unit `jellyfin` (enabled at boot) | Running |
-| Library | `/mnt/storage/media/{movies,tv,music}` — **NFS from jason** (temporary, 2026-10-22): the Pi's WD Elements 1TB died ("Unit Not Ready" at boot) and its contents were abandoned; the Pi now NFSv4-mounts jason's internal 1.8T disk at the same `/mnt/storage` path (fstab `192.168.1.181:/mnt/storage nfs vers=4,nolock,nofail,...`; jason UFW allows 2049/tcp from the Pi; `/etc/exports` on jason). Mount the 2TB SSD at `/mnt/storage` the same way (same path = zero config changes) and drop the fstab NFS line. Holds: Mulholland Drive + Twin Peaks S01 (downloading) | Live |
+| Library | `/mnt/storage/media/{movies,tv,music}` — **NFS from jason** (temporary, 2026-10-22): the Pi's WD Elements 1TB died ("Unit Not Ready" at boot) and its contents were abandoned; the Pi now NFSv4-mounts jason's internal 1.8T disk at the same `/mnt/storage` path (fstab `192.168.1.181:/mnt/storage /mnt/storage nfs vers=4,nolock,nofail,_netdev 0 0`; do NOT add `x-systemd.automount`/`x-systemd.idle-timeout` — an idle timeout unmounts the share after 10 min and makes Jellyfin drop the library; jason UFW allows 2049/tcp from the Pi; `/etc/exports` on jason). Mount the 2TB SSD at `/mnt/storage` the same way (same path = zero config changes) and drop the fstab NFS line. Holds: Mulholland Drive + Twin Peaks S01 (downloading) | Live |
 | Access (LAN) | **`http://tom/jf`** (nginx reverse proxy on the Pi, subpath mode via Jellyfin `BaseUrl=/jf`; `tom` = mDNS from avahi) | Working |
 | qBittorrent WebUI | **`http://tom/bt`** — basic auth: `andy` / `homelab` (change it!). Direct API stays loopback-only for the `grab` scripts | Working |
 | TV client | **Laptop + HDMI, Jellyfin web app** — pending Google TV Streamer (TODO) | Working |
@@ -22,9 +22,13 @@ the drive is mounted at the same `/mnt/storage` path the desktop used.
 
 qBittorrent 5.1 on the Pi (system service `qbittorrent-nox@tom`, WebUI
 `127.0.0.1:8081` **on the Pi**, localhost auth bypassed) — **bound to the Pi's
-`protonvpn` WireGuard interface**: downloads only flow while the Pi's Proton
-tunnel is up; tunnel down = no traffic, never leaks. WebUI never exposed to
-anyone; the `grab` scripts reach it over `ssh tom`.
+`proton0` WireGuard interface** (IP `10.2.0.2`): downloads only flow while
+the Pi's Proton tunnel is up; tunnel down = no traffic, never leaks. Note the
+interface was renamed from `protonvpn` to `proton0` by the Proton CLI/WireGuard
+setup — if qBittorrent ever logs "configured network interface is invalid",
+re-point `Session\Interface`/`Session\InterfaceName`/`Session\InterfaceAddress`
+in `~tom/.config/qBittorrent/qBittorrent.conf` to `proton0`/`10.2.0.2`.
+WebUI never exposed to anyone; the `grab` scripts reach it over `ssh tom`.
 
 | Script (in `scripts/`, run from the desktop) | What |
 |---|---|
