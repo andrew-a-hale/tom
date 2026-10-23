@@ -77,10 +77,6 @@ then restart the binary (run from that dir — template paths are relative).
 - **cron PATH lacks `/usr/local/bin`**: the cloudflared watchdog ran
   `nohup: failed to run command 'cloudflared'` for 37 min. Crontab now uses
   absolute paths everywhere.
-- **`tom.local` is dead on the desktop** (mDNS answers only a link-local IPv6;
-  NSS path broken). Fixed with `/etc/hosts`: `192.168.1.24 tom.local tom`.
-  LAN service paths (nginx :80 on the Pi): `http://tom.local/jf/` → Jellyfin,
-  `http://tom.local/bt/` → qBittorrent (both need their own logins).
 - **Pet cam runs 24/7** (`petcam.sh` supervisor relaunches the pipeline if
   rpicam/ffmpeg die) — detections must happen any time, the on-demand/duty
   scheme is gone. The Pi's resource cost is tamed in the detector instead:

@@ -1,50 +1,34 @@
 #!/bin/bash
-# vpn [home|away|off|adblock|status|help]
+# vpn [off|any|status|help] — Proton VPN mode switcher (official CLI).
+# Remote LAN access is Tailscale's job (tailscale up/down), not this script.
 case "${1:-help}" in
-home)
-  sudo wg-quick down protonvpn 2>/dev/null
-  protonvpn disconnect 2>/dev/null
-  sudo resolvconf -u 2>/dev/null
-  ip link show wg-pi >/dev/null 2>&1 || sudo wg-quick up wg-pi
-  # ponytail: fail-open guard — Pi's Proton cert expires ~weekly; without this
-  # home mode silently exits via the home ISP instead of via Proton
-  TS=$(ssh -o ConnectTimeout=8 tom 'sudo wg show protonvpn latest-handshakes' 2>/dev/null | awk '{print $2}' | head -1)
-  AGE=$(( $(date +%s) - ${TS:-0} ))
-  if [[ -z ${AGE:-} || ${AGE:-999999} -gt 180 ]]; then
-    echo "WARN: Pi's Proton tunnel is down/stale — traffic is exiting via the home ISP. Run vpn-sync-pi."
-    exit 1
-  fi
-  ;;
-away)
-  sudo wg-quick down wg-pi 2>/dev/null
+any)
   protonvpn connect 2>&1 | tail -3
   if ! ip route get 1.1.1.1 2>/dev/null | grep -q 'dev proton0'; then
     echo "WARN: not routing through Proton - traffic is going via $(ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="dev") print $(i+1)}')"
     exit 1
   fi
+  # ponytail: route check alone passes while Proton's killswitch dummy pins DNS to ::1 —
+  # a real fetch is the only end-to-end check; fix for that bug is a daemon restart
+  if ! curl -s --max-time 8 https://ipinfo.io/ip >/dev/null; then
+    echo "WARN: proton0 is routing but traffic/DNS is dead (stale Proton killswitch state)."
+    echo "Fix: sudo systemctl restart proton.VPN.service me.proton.vpn.split_tunneling.service && vpn any"
+    exit 1
+  fi
   ;;
 off)
-  sudo wg-quick down wg-pi 2>/dev/null
-  protonvpn disconnect 2>/dev/null
+  protonvpn disconnect 2>&1 | tail -1
   echo "VPN off — using bare internet"
   ;;
-adblock|ads)
-  shift
-  exec "$HOME/.local/bin/vpn-adblock" "${@:-status}"
-  ;;
 status)
-  curl -s --max-time 5 https://ipinfo.io/json 2>/dev/null | python3 -c "
-import sys,json
-d=json.load(sys.stdin)
-print(f\"IP: {d['ip']}  ({d['city']}, {d['country']})\")" 2>/dev/null
-  sudo wg show 2>/dev/null | grep -E "interface|latest" | head -10
-  printf "Ad-block DNS: %s\n" "$(ssh -o ConnectTimeout=4 raspberrypi 'systemctl is-active dnsmasq' 2>/dev/null || echo unreachable)"
+  protonvpn status 2>&1
+  echo "Public IP: $(curl -s --max-time 8 https://ipinfo.io/ip) ($(curl -s --max-time 8 https://ipinfo.io/city))"
   ;;
-help)
-  printf "home\n"
-  printf "away\n"
-  printf "off\n"
-  printf "adblock [setup|update|on|off|status]\n"
-  printf "status\n"
+*)
+  echo "usage: vpn [off|any|status]"
+  echo "  off    — bare internet"
+  echo "  any    — Proton VPN, any exit"
+  echo "  status — connection state + public IP"
+  echo "LAN access from outside: tailscale (not this script)"
   ;;
 esac

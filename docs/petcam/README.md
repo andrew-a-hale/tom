@@ -13,7 +13,7 @@ references are in this folder. The website source has its own repo
 | `petcam-detect.py` | `~/petcam-detect.py` | 5 s loop, multi-pass: movement diff → YOLOv8n → hue classifier (willow/pancake), writes shots + log |
 | `andrewhale-web` | `~/projects/andrewahale.com/web/` | Go binary on 127.0.0.1:8080; host-routes `petcam.andrewahale.com` (gallery `/`, `/live`, `/log`, `/delete`) |
 | cloudflared | `/usr/local/bin/cloudflared` | tunnel `andrewahale`, ingress in `cloudflared-config.yaml` |
-| nginx | :80 | LAN aliases `tom.local/jf/` (Jellyfin), `tom.local/bt/` (qBittorrent + basic auth) |
+| nginx | :80 | LAN aliases `tom/jf/` (Jellyfin), `tom/bt/` (qBittorrent + basic auth) |
 | cron | see `crontab.txt` | `@reboot` starts + 2-min watchdogs for all four services |
 
 ## Rebuild steps

@@ -1,93 +1,114 @@
 # VPN
 
-Proton VPN via WireGuard, with the Raspberry Pi as a gateway and ad-blocking DNS.
-**Verified working 2026-10-21: `vpn away` → proton0 up, public IP = Proton Sydney.**
+Redesigned 2026-10-22/23 (plan: `design.md`, decision: `complete/proton-cli-tailscale-redesign-2026-10-23.md`).
+Three orthogonal jobs, three tools — no shared switch:
 
-## Layout
-
-- Scripts: `scripts/` in this repo (versioned)
-- Symlinks: `~/.local/bin/{vpn,vpn-adblock,vpn-sync-pi}` and `/usr/local/bin/vpn`
-  (`~/.local/bin` stays on PATH and `vpn` internally calls `vpn-adblock` from there;
-  `/usr/local/bin` is the FHS home for site-local commands — `/usr/bin` belongs to pacman)
-- Server: desktop `jason`, Proton daemon `proton.VPN.service` + `proton-vpn-cli` (package `proton-vpn-cli`)
-- Pi: hostname `tom`, reachable as both `tom` and `raspberrypi` (mDNS aliases, same machine)
-
-## `vpn` — mode switcher
-
-| Command | What happens |
+| Job | Tool |
 |---|---|
-| `vpn home` | Direct Proton down, `wg-quick up wg-pi` — all desktop traffic tunnels through the Pi's Proton WireGuard (`/etc/wireguard/wg-pi.conf` on desktop) |
-| `vpn away` | Pi tunnel down, `protonvpn connect` — direct Proton from the desktop. Self-checks: exits 1 + warns if traffic isn't routing via `proton0` |
-| `vpn off` | Both down — bare internet (exposed) |
-| `vpn adblock [setup\|update\|on\|off\|status]` | Proxy to `vpn-adblock` (runs on the Pi) |
-| `vpn status` | Public IP + wg handshakes + ad-block DNS state |
+| Traffic privacy (opt-in, per device) | **Proton VPN CLI** (official `proton-vpn-cli`) |
+| Torrent safety (tom) | qBittorrent **interface-bound to `proton0`** |
+| Remote access | **Tailscale** (LAN) + **Cloudflare tunnel** (public HTTP) |
 
-Two Proton endpoints, one at a time: `home` routes via the Pi's tunnel (its own
-protonvpn.conf on the Pi), `away` routes via the desktop's own connection.
+## `vpn` — Proton mode switcher (runs on jason, symlinked from `~/.local/bin`)
 
-## `vpn-adblock` — ad-blocking DNS on the Pi
+| Command | Does | Meaning |
+|---|---|---|
+| `vpn off` | `protonvpn disconnect` | bare ISP |
+| `vpn any` | `protonvpn connect` | Proton, any exit |
+| `vpn status` | `protonvpn status` + public IP | check before anything sensitive |
 
-Runs remotely over SSH on the Pi (`vpn-adblock` on the desktop just execs the
-Pi-side copy at `/usr/local/bin/vpn-adblock`).
+- The `any` guard does a real fetch end-to-end and exits 1 with a fix hint
+  (route checks alone can pass while traffic/DNS is dead —
+  `complete/away-dns-blackhole-2026-10-22.md`).
+- `vpn-soak [minutes-per-mode] [modes...]` — cycles modes and probes every 5s
+  with state snapshots, for diagnosing intermittent dropouts. Output:
+  `~/vpn-soak-<ts>.log`.
+- Phones/tablets: the Proton app is the whole story. Remote LAN access is
+  Tailscale's toggle — never mixed into `vpn`.
 
-- dnsmasq on the Pi: upstream `9.9.9.9` + `1.1.1.1`, `addn-hosts` from the
-  StevenBlack hosts list (`/etc/dnsmasq-adblock.hosts`, deliberately outside
-  `/etc/dnsmasq.d/`)
-- `setup` installs everything: dnsmasq, config, list, and a daily
-  `adblock-update.timer` (systemd) to refresh the list
-- Serves LAN clients + anyone tunnelled through the Pi (`home` mode)
+## tom (the Pi)
 
-## `vpn-sync-pi` — weekly cert refresh
+- `proton-vpn-cli` 1.0.5 + `proton-vpn-daemon` 0.13.8 from Proton's Debian repo
+  (arm64 works). Connected with `protonvpn connect --p2p`; a 5-min cron
+  watchdog keeps `proton0` up (see `crontab -l`). **Cron needs
+  `DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus`** — the CLI talks to
+  the user session bus.
+- **qBittorrent (`qbittorrent-nox@tom`) binds to `proton0`**
+  (`Session\Interface`/`Session\InterfaceName` in
+  `~/.config/qBittorrent/qBittorrent.conf`). That is the *entire* VPN
+  enforcement: when the tunnel is down, torrent sockets have nowhere to go.
+  **Verified 2026-10-23**: with `protonvpn disconnect`, qBittorrent holds zero
+  external sockets while everything else keeps working on the bare ISP.
+- Everything else on tom (website, petcam, jellyfin, cloudflared) rides the
+  VPN when it's up and the bare ISP when it's not — both work, the Cloudflare
+  tunnel is outbound-only. Verified 200/302 on all three hostnames in the
+  VPN-up state.
+- Kill switch **off** (default). Its dummy interface is what broke DNS on
+  jason, and interface binding already covers the leak that matters.
+- Sign-in is a one-time thing: `ssh tom protonvpn signin <username> --totp`.
+  The session survives reboots (verified on jason). Re-auth only after a
+  Proton password change, keyring wipe, or Proton-side revocation — symptom is
+  `Authentication required` from `vpn any`/`protonvpn connect`.
 
-Proton WireGuard certs expire ~weekly. Run manually (or cron it) when the Pi's
-tunnel stops passing traffic: connects Proton on the desktop, lifts the fresh
-private key/endpoint/peer pubkey from the live interface, pushes a new
-`/etc/wireguard/protonvpn.conf` to the Pi, hot-reloads it with `wg syncconf`,
-then swaps the desktop back to `wg-pi`. Zero downtime for the Pi tunnel.
+### Debian packaging gaps (worked around 2026-10-23)
 
-## Bugs found & fixed (2026-10-21)
+Proton's Debian build is missing pieces their Arch build doesn't need:
 
-Three real bugs surfaced when verifying `vpn home`:
+1. **`nm-protun.service` is missing** — `nm-protun.name` declares
+   `SystemdService=nm-protun.service` but no unit ships, so NetworkManager can
+   never spawn the WireGuard plugin. Symptom: `protonvpn connect` prints
+   `Connection failed` while leaving a half-up tunnel (interface up, packets
+   flowing, `status` says Disconnected). Fix: the unit in
+   `files/nm-protun.service` → `/usr/lib/systemd/system/nm-protun.service`.
+2. **polkit denies ssh/cron sessions** — they're "inactive", so
+   `connection-add` fails (`audit: ... reason="Insufficient privileges"`),
+   and `protonvpn connect` says `An unexpected error occurred`. Fix:
+   `files/50-vpn-tom-nm.rules` → `/etc/polkit-1/rules.d/`.
+3. **Harmless noise**: `Keyring ... SecretService ... KeyringLocked`
+   tracebacks in proton logs on headless — credentials fall back to the SSO
+   store (`~/.config/Proton/`). No gnome-keyring needed.
 
-1. **`vpn home` failed open, silently.** If the Pi's Proton cert had expired
-   (weekly), the desktop tunnelled to a bare Pi and traffic exited via the home
-   ISP while you believed you were VPN'd. Fixed: `vpn home` now checks the Pi
-   tunnel's handshake age and exits 1 with a warning to run `vpn-sync-pi`.
-2. **`vpn-sync-pi` detected the wrong interface.** Its exclusion-list heuristic
-   grabbed `enp12s0` (the down ethernet port) instead of `proton0`, so the cert
-   never reached the Pi. Fixed: match `^proton|^tun` by name.
-3. **The Pi-side reload broke and was swallowed.** `wg syncconf <(...)` fails
-   through ssh+sudo (fopen error), and the `&&` chain hid the failure. Fixed:
-   `systemctl restart wg-quick@protonvpn` — idempotent, works whether the
-   tunnel is up or down.
+### Manual install (fresh Pi)
 
-After the fix: Pi tunnel active, desktop `wg-pi` exit = Proton Brisbane
-(103.216.220.166 on both ends). Cert refresh still needed ~weekly when the
-Pi tunnel dies — `vpn-sync-pi` now actually works for that.
+1. Proton repo: install `protonvpn-stable-release` .deb from
+   `https://repo.protonvpn.com/debian/dists/stable/main/binary-all/`, then
+   `apt install proton-vpn-cli proton-vpn-daemon`.
+2. Drop in the two files above + `systemctl daemon-reload`.
+3. `protonvpn signin <username> --totp`, then `protonvpn connect --p2p`.
+4. Bind qBittorrent to `proton0`; put the watchdog line in crontab (with the
+   DBUS env var).
 
-## Pi-side VPN gateway (audited 2026-10-21)
+## Tailscale — remote access to the LAN
 
-`wg-quick@protonvpn` on the Pi: **enabled at boot**, `ip_forward=1`, nft NAT
-`wg-lan → protonvpn masquerade` (desktop `vpn home` traffic). The Pi also runs a
-second WireGuard, `wg-lan` (10.10.0.0/24), and tailscale.
+- tom advertises `192.168.1.0/24` (and, from an earlier setup, exit-node
+  routes `0.0.0.0/0` + `::/0` — leave them unapproved unless home-exit is
+  wanted). **Approve routes in the Tailscale admin console** (machine `tom` →
+  Edit route settings).
+- Clients: `iphone-11` and `jason` are in the tailnet already; add the laptop
+  the same way. One toggle per device, works from anywhere (NAT traversal —
+  never port-forward).
 
-**Design decision — fail-open:** the Pi also NATs `wg-lan → wlan0`, so when the
-Proton cert dies, home-mode clients silently use the bare home ISP instead of
-blackholing. Accepted deliberately: `vpn home`'s handshake guard warns loudly,
-and qBittorrent (on whichever box) is interface-bound to `proton0`/`protonvpn`
-so downloads cannot leak in any mode. Fail-closed (remove the wlan0 rule + the
-Pi's internet-restore cron) rejected as max inconvenience for no additional
-protection of the asset that matters.
+## Deleted 2026-10-23 (the old machinery)
 
-## Ops notes
+- `wg-quick@protonvpn` + all of `/etc/wireguard` on tom — hand-minted configs
+  with ~weekly expiry and the `vpn-sync-pi` refresh ritual.
+- `wg-quick@wg-lan` + `wg-pi` client confs — the old "home mode" full tunnel.
+- `dnsmasq` + `adblock-update.timer` + `vpn-adblock` + the `vpn adblock`
+  subcommand (adblock was never a requirement; dnsmasq was already dead).
+- Stale `wg0.conf` (referenced `eth0`) and jason's 5 wireguard confs
+  (`protonvpn{,-au,-us}`, `wg-pi`, `wg0-vps`).
 
-- **No kill switch.** If the tunnel drops, traffic fails over to the bare ISP
-  route. For sensitive downloads, verify with `vpn status` (IP should say
-  Sydney, not TPG Brisbane) before and during.
-- DNS: in `away` mode the Proton daemon sets DNS (ad-block list not applied);
-  the ad-block DNS applies to Pi-tunnelled (`home`) and LAN clients using the
-  Pi's dnsmasq.
-- New Proton plugin/CLI updates: `protonvpn` re-checks server list on connect
-  ("Server list is outdated, updating...") — normal.
-- Changing these scripts: edit in `vpn/`, symlinks pick it up — never edit
-  through the symlink target dir.
+## Cleanup left to the human
+
+- Router: remove the UDP/51820 port-forward (old wg-lan remote access) if present.
+- Cloudflare DNS: delete the `vpn.andrewahale.com` record (202.59.30.216 — stale).
+- Tailscale admin: approve tom's `192.168.1.0/24` route.
+
+## Bugs found & fixed
+
+1. `vpn home` failed open silently when the Pi's Proton cert expired (2026-10-21) — fixed with a handshake guard, then designed away.
+2. `vpn-sync-pi` detected the wrong interface (2026-10-21) — fixed, then deleted.
+3. Pi-side `wg syncconf` reload broke through ssh+sudo (2026-10-21) — fixed, then deleted.
+4. `vpn away` silently blackholed DNS via the Proton kill-switch dummy (2026-10-22) — `complete/away-dns-blackhole-2026-10-22.md`; the `vpn any` guard still checks for it.
+5. Missing `nm-protun.service` unit in Proton's Debian package (2026-10-23) — worked around above.
+6. polkit "Insufficient privileges" for ssh/cron NM connections (2026-10-23) — worked around above.

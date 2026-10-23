@@ -1,0 +1,10 @@
+// ponytail: full NetworkManager control for the headless VPN user. ssh/cron
+// sessions are polkit-"inactive", so the Proton CLI cannot add NM connections
+// without this. Narrow to settings.modify.system + network-control if tom ever
+// runs untrusted code.
+polkit.addRule(function(action, subject) {
+    if (subject.user == "tom" &&
+        action.id.indexOf("org.freedesktop.NetworkManager.") === 0) {
+        return polkit.Result.YES;
+    }
+});

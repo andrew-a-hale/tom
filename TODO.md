@@ -2,7 +2,23 @@
 
 ## Home Lab
 
-- [ ] Use Linear
+- [x] VPN redesign: `vpn off|any|status` (Proton CLI), qBittorrent VPN-gated by
+      interface binding, remote LAN access via Tailscale — done 2026-10-23,
+      see docs/vpn/README.md + docs/vpn/complete/proton-cli-tailscale-redesign-2026-10-23.md
+- [ ] Approve tom's 192.168.1.0/24 Tailscale route (admin console); remove
+      router UDP/51820 port-forward + stale vpn.andrewahale.com DNS record
+
+- [ ] Use Linear for task tracking
+- [ ] Setup a daily task to check if all the systems are working
+  - [ ] Make a skill that documents the list of things to check
+
+- [ ] What is the point of petcam thottle if the image was classified anyway? It should just update the latest.
+- [ ] Reduce the amount of near misses to label
+- [ ] Investigate turning off the petcam when lighting is extremely bad (at night with lights off)
+
+- [ ] Verify nginx.conf for jellyfin and qBittorrent on tom and commit the topology to the repo for simple bootstrap. This includes the hostname files for each of Tom, Jason, and Rose.
+
+- [ ] Ensure this homelab is simple to bootstrap
 
 ## Purchases
 

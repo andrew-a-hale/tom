@@ -8,8 +8,8 @@ Serve media from the homelab to the TV. **Working end-to-end since 2026-10-21.**
 |---|---|---|
 | Server | Jellyfin 12.2 on Pi `tom` (Raspberry Pi 5, 8GB), Debian package from repo.jellyfin.org, systemd unit `jellyfin` (enabled at boot) | Running |
 | Library | `/mnt/storage/media/{movies,tv,music}` — **NFS from jason** (temporary, 2026-10-22): the Pi's WD Elements 1TB died ("Unit Not Ready" at boot) and its contents were abandoned; the Pi now NFSv4-mounts jason's internal 1.8T disk at the same `/mnt/storage` path (fstab `192.168.1.181:/mnt/storage nfs vers=4,nolock,nofail,...`; jason UFW allows 2049/tcp from the Pi; `/etc/exports` on jason). Mount the 2TB SSD at `/mnt/storage` the same way (same path = zero config changes) and drop the fstab NFS line. Holds: Mulholland Drive + Twin Peaks S01 (downloading) | Live |
-| Access (LAN) | **`http://tom.local/jf`** (nginx reverse proxy on the Pi, subpath mode via Jellyfin `BaseUrl=/jf`; `tom.local` = mDNS from avahi) | Working |
-| qBittorrent WebUI | **`http://tom.local/bt`** — basic auth: `andy` / `homelab` (change it!). Direct API stays loopback-only for the `grab` scripts | Working |
+| Access (LAN) | **`http://tom/jf`** (nginx reverse proxy on the Pi, subpath mode via Jellyfin `BaseUrl=/jf`; `tom` = mDNS from avahi) | Working |
+| qBittorrent WebUI | **`http://tom/bt`** — basic auth: `andy` / `homelab` (change it!). Direct API stays loopback-only for the `grab` scripts | Working |
 | TV client | **Laptop + HDMI, Jellyfin web app** — pending Google TV Streamer (TODO) | Working |
 | Remote access | Not set up — add `jellyfin.andrewahale.com` to the existing Cloudflare tunnel when wanted (docs/server step 9) | Skipped |
 | Desktop `jason` | Jellyfin + qBittorrent **stopped and disabled** 2026-10-21 — the desktop is out of the media business | Off |
@@ -50,7 +50,7 @@ copyrighted material.
 1. Downloads land in `/mnt/storage/media/movies` (or `tv/`) automatically
 2. Jellyfin scans on start / every ~30min (or Dashboard → Libraries → Scan All
    Libraries if impatient)
-3. TV: laptop → HDMI → browser → `http://tom.local/jf` → play
+3. TV: laptop → HDMI → browser → `http://tom/jf` → play
 
 ## What we tried on the TV and rejected
 

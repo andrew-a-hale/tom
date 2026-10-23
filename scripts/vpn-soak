@@ -1,0 +1,95 @@
+#!/bin/bash
+# vpn-soak — cycle VPN modes, probe connectivity every 5s with timestamps,
+# snapshot state + journal on every failure. For diagnosing intermittent dropouts.
+# Usage: vpn-soak [minutes-per-mode] [modes...]   (default: 10, "any off")
+# Output: ~/vpn-soak-<ts>.log  (watch live with: tail -f <log>)
+set -u
+
+exec 9>/tmp/vpn-soak.lock && flock -n 9 || { echo "vpn-soak already running"; exit 1; }
+
+MIN=${1:-10}
+shift 2>/dev/null || true
+MODES=(${*:-any off})
+VPN=$(command -v vpn || echo "$HOME/projects/tom/scripts/vpn")
+LOG="$HOME/vpn-soak-$(date +%Y%m%d-%H%M%S).log"
+START=$(date +%s)
+TMP=$(mktemp)
+PROBES=0; FAILS=0
+
+log() { echo "$(date '+%F %T %Z') $*" | tee -a "$LOG"; }
+
+snapshot() {
+  {
+    echo "=== snapshot: $1 $(date '+%F %T %Z') ==="
+    ip route; echo; ip rule
+    echo; resolvectl status
+    echo; sudo wg show
+    echo; journalctl -u proton.VPN.service --since '-2 min' -q --no-pager
+    echo "=== end snapshot ==="
+  } >> "$LOG"
+}
+
+probe() { # $1 = mode label
+  local t lan=FAIL dns=FAIL http hs
+  PROBES=$((PROBES + 1))
+  ping -c1 -W2 192.168.1.1 >/dev/null 2>&1 && lan=ok
+  sudo resolvectl flush-caches 2>/dev/null
+  t=$(date +%s%3N)
+  getent ahostsv4 www.gstatic.com >/dev/null 2>&1 && dns="$(( $(date +%s%3N) - t ))ms"
+  http=$(curl -s -o /dev/null -w '%{http_code} %{time_total}' --max-time 10 https://www.gstatic.com/generate_204)
+  hs=$(sudo wg show all latest-handshakes 2>/dev/null | awk 'NF>=2 && $NF>0 {print $NF}' | sort -rn | head -1)
+  if [[ -n ${hs:-} ]]; then hs="$(( $(date +%s) - hs ))s"; else hs=none; fi
+  if [[ $lan == FAIL || $dns == FAIL || ${http%% *} != 204 ]]; then
+    FAILS=$((FAILS + 1))
+    log "PROBE mode=$1 lan=$lan dns=$dns http=$http hs=$hs FAIL"
+    snapshot "probe failure in $1"
+  else
+    log "PROBE mode=$1 lan=$lan dns=$dns http=$http hs=$hs ok"
+  fi
+}
+
+run_vn() { # run vpn <mode>, timestamp each output line; returns vpn's exit code
+  "$VPN" "$1" >"$TMP" 2>&1
+  local rc=$?
+  while IFS= read -r line; do log "vpn[$1] $line"; done <"$TMP"
+  return $rc
+}
+
+trap 'log "INTERRUPTED — partial results in $LOG"; rm -f "$TMP"' INT TERM
+
+# remember starting mode so the soak ends where it began
+orig=off
+ip link show proton0 >/dev/null 2>&1 && orig=any
+
+log "START soak: ${MIN}min per mode [${MODES[*]}] — log: $LOG"
+snapshot "start"
+
+for mode in "${MODES[@]}"; do
+  log "MODE-SWITCH -> $mode"
+  label=$mode
+  if run_vn "$mode"; then
+    log "MODE-SWITCH $mode ok"
+  else
+    log "MODE-SWITCH $mode FAILED (guard says traffic may not be VPN'd)"
+    label="$mode(guard-fail)"
+    snapshot "mode switch $mode failed"
+  fi
+  end=$(( $(date +%s) + MIN * 60 ))
+  while (( $(date +%s) < end )); do
+    probe "$label"
+    sleep 5
+  done
+  snapshot "end of $mode"
+done
+
+log "RESTORE -> $orig"
+run_vn "$orig"
+log "SUMMARY probes=$PROBES failures=$FAILS — failure timestamps are the PROBE ... FAIL lines above"
+
+{
+  echo "=== journal since $(date -d "@$START" '+%F %T') ==="
+  journalctl --since "@$START" -q --no-pager \
+    -u proton.VPN.service -u me.proton.vpn.split_tunneling.service -u NetworkManager -u systemd-resolved -u wpa_supplicant 2>&1
+} >> "$LOG"
+log "DONE — full log: $LOG"
+rm -f "$TMP"

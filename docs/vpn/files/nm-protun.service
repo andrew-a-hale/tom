@@ -1,0 +1,8 @@
+[Unit]
+Description=Proton VPN NetworkManager plugin (protun)
+After=NetworkManager.service
+
+[Service]
+Type=dbus
+BusName=org.freedesktop.NetworkManager.protun
+ExecStart=/usr/libexec/nm-protun-service
