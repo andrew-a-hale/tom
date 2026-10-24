@@ -1,11 +1,12 @@
 # Website (andrewahale.com)
 
+// TODO: this needs to be rationalised, there is stale information here.
 **Verified working 2026-10-21** — every endpoint 200, tunnel healthy, live sensor data.
 
 ## Architecture
 
 ```
-visitor → Cloudflare edge → tunnel "andrewahale" → cloudflared (on Pi) → 127.0.0.1:8080
+visitor → Cloudflare edge → tunnel "andrewahale" → cloudflared (on Tom) → 127.0.0.1:8080
                                                             Go web app → DHT sensor
 ```
 
@@ -16,7 +17,7 @@ visitor → Cloudflare edge → tunnel "andrewahale" → cloudflared (on Pi) →
   `/` = detection snapshots gallery, `/live` = HLS stream, `/shots/*` = snapshot
   files (`/home/tom/petcam/shots/`), `/hls/*` = stream segments (`/dev/shm/petcam`,
   produced by `~/petcam.sh`).
-- **Tunnel**: `cloudflared tunnel run andrewahale` on the Pi. Locally-managed
+- **Tunnel**: `cloudflared tunnel run andrewahale` on Tom. Locally-managed
   — ingress lives in `/home/tom/.cloudflared/config.yaml` on the Pi
   (andrewahale.com + www + petcam → :8080, jellyfin.andrewahale.com → :8096,
   placetime → :8081). New public hostname = edit that file +
@@ -27,8 +28,8 @@ visitor → Cloudflare edge → tunnel "andrewahale" → cloudflared (on Pi) →
   on desktops). Verify the real public answer over DoH (bypasses the local
   port-53 interception): `curl -H "accept: application/dns-json"
   "https://cloudflare-dns.com/dns-query?name=<host>&type=A"`.
-- **Everything else on the Pi** (this lab): dnsmasq (ad-block DNS),
-  VPN WireGuard gateway. Docker/ollama/NFS removed 2026-10-21 (were idle
+- **Everything else on Tom** (this lab): dnsmasq (ad-block DNS),
+  VPN WireGuard gateway, Docker/ollama/NFS all were removed 2026-10-21 (were idle
   leftovers — zero containers, no exports, an unused 0.8B model).
 - Removed on 2026-10-21: picoclaw (idle agent gateway, had been running since
   June, zero active connections — data archived to
@@ -119,9 +120,10 @@ swap. This is supervised fine-tuning with active-learning data collection
 (uncertainty sampling + pseudo-labels), not reinforcement learning.
 
 Half-baked edges to finish later: no dedupe (near-identical near-miss frames
-pile up), no size cap on either folder, the 0.1–0.4 band and 2 min throttle
-are guesses, no split tooling. Class 0 = "cat" only: the willow/pancake naming
-stays the hue classifier's job, not the model's.
+pile up), no size cap on either folder, the 0.1–0.4 band and 2 min throttle are
+guesses, no split tooling. Class 0 = "cat" only: the willow/pancake naming
+stays the hue classifier's job, not the model's. The hue classifier needs to
+take into account the room lighting.
 
 ## Security
 

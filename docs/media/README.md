@@ -18,7 +18,7 @@ Jellyfin's server name is `tom` (renamed in the wizard — yes, same as the Pi's
 hostname). Config/user/libraries carried over from the desktop with zero edits:
 the drive is mounted at the same `/mnt/storage` path the desktop used.
 
-## Downloads (agent-driven)
+## Downloads
 
 qBittorrent 5.1 on the Pi (system service `qbittorrent-nox@tom`, WebUI
 `127.0.0.1:8081` **on the Pi**, localhost auth bypassed) — **bound to the Pi's
@@ -28,26 +28,6 @@ interface was renamed from `protonvpn` to `proton0` by the Proton CLI/WireGuard
 setup — if qBittorrent ever logs "configured network interface is invalid",
 re-point `Session\Interface`/`Session\InterfaceName`/`Session\InterfaceAddress`
 in `~tom/.config/qBittorrent/qBittorrent.conf` to `proton0`/`10.2.0.2`.
-WebUI never exposed to anyone; the `grab` scripts reach it over `ssh tom`.
-
-| Script (in `scripts/`, run from the desktop) | What |
-|---|---|
-| `grab <magnet\|url> [movies\|tv]` | add a torrent the user supplies |
-| `grab-ia "<title>" [pick]` | search Internet Archive (legal sources), torrent best match (or row `pick`) |
-
-Both pipe the URL to `ssh tom curl --data-urlencode` (stdin avoids ssh quoting
-breakage; urlencode handles `&` in multi-tracker magnets). Categories land
-files in `/mnt/storage/media/{movies,tv}` via `/mnt/storage/media/.incoming/`.
-
-Verified end-to-end on the Pi 2026-10-21 (Duck and Cover, public domain,
-10 MB/s through Proton; external address confirmed as the Proton exit). IA
-quirk: their torrents bundle all formats (gif/ogv/xml) and often stall at 99%
-— the wanted file is normally complete; delete the torrent afterwards if it
-lingers. Proton has no port forwarding: `connection_status: firewalled` is
-normal and expected.
-
-Sourcing policy: Internet Archive + user-supplied links. No sourcing of
-copyrighted material.
 
 ## How to use it
 
@@ -65,21 +45,10 @@ TV fine, but the TV refuses files under the fallback "Generic Device" profile
 ("No matching device profile found" — no VIDAA profile exists). File itself was
 vanilla H.264/AAC, i.e. not a codec problem. VIDAA+DLNA = time sink, abandoned.
 
-## Upgrade paths (in order)
+## Upgrade Steps
 
-1. **Google TV Streamer (~$219 AU)** — decided 2026-10-21, on order when
-   ready. HDMI dongle running Google TV: official Jellyfin app from the Play
-   Store, full UI (posters, resume points, progress sync), **direct-plays
-   H.264/HEVC**, plus Ethernet. Replaces the laptop+HDMI dependency and hides
-   the VIDAA problem permanently.
-   Rejected: Chromecast w/ Google TV (~$99, older, WiFi-only), Fire TV Stick
-   (~$70, sideloaded APK), Nvidia Shield (~$200+, overkill for one TV).
-2. **Pi as HTPC** (LibreELEC + Kodi + Jellyfin addon) plugged into the TV — only
-   if the Pi is a 4/5; needs only a ~$10 microSD card. Tinkering path.
-3. **Ethernet cable to `enp12s0`** (port exists, empty) — desktop is on 2.4GHz
-   WiFi; fine for 1080p, marginal for 4K remuxes. The one physical fix that
-   matters when 4K shows up.
-4. **Cloudflare Tunnel** to expose Jellyfin away from home — reuses existing
+1. Google TV Streamer or Nvidia Shield.
+2. **Cloudflare Tunnel** to expose Jellyfin away from home — reuses existing
    website stack.
 
 ## Notes / ceilings
@@ -87,6 +56,5 @@ vanilla H.264/AAC, i.e. not a codec problem. VIDAA+DLNA = time sink, abandoned.
 - 2TB drive is a single old WD Green, no redundancy — fine for re-downloadable
   media; irreplaceable files (Photos backup on same disk) need a separate backup
   plan.
-- 7600X software-transcodes fine; aim for direct play so it rarely has to.
 - New Jellyfin plugins need `sudo systemctl restart jellyfin` to load — the web
   UI's install button doesn't restart the server.

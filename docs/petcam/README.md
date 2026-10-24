@@ -79,3 +79,7 @@ Top of `petcam-detect.py`: `MIN_CONF`, `ORANGE_*`/`GRAY_MAX_SAT` (recalibrated 2
 over 113 hand-labeled boxes, bright to dim light — orange fraction alone separates
 the cats: pancake 0.27–0.75 vs willow 0.00–0.10, threshold `ORANGE_FRAC=0.18` in the gap),
 `MOTION_*`, `HEARTBEAT_S`, `KEEP_PER_CAT`, `THROTTLE_S`, `LOG_KEEP_DAYS`.
+
+## Model Fine Tuning
+
+// TODO: Document here. There is a skill!

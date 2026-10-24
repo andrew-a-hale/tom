@@ -1,34 +1,44 @@
 #!/bin/bash
-# vpn [off|any|status|help] — Proton VPN mode switcher (official CLI).
+# vpn [off|any|safe|status|help] — Proton VPN mode switcher (official CLI).
 # Remote LAN access is Tailscale's job (tailscale up/down), not this script.
+#   any   — Proton, fastest exit anywhere
+#   safe  — Proton, Switzerland exit (P2P-friendly; use for torrents)
 case "${1:-help}" in
 any)
   protonvpn connect 2>&1 | tail -3
-  if ! ip route get 1.1.1.1 2>/dev/null | grep -q 'dev proton0'; then
-    echo "WARN: not routing through Proton - traffic is going via $(ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="dev") print $(i+1)}')"
-    exit 1
-  fi
-  # ponytail: route check alone passes while Proton's killswitch dummy pins DNS to ::1 —
-  # a real fetch is the only end-to-end check; fix for that bug is a daemon restart
-  if ! curl -s --max-time 8 https://ipinfo.io/ip >/dev/null; then
-    echo "WARN: proton0 is routing but traffic/DNS is dead (stale Proton killswitch state)."
-    echo "Fix: sudo systemctl restart proton.VPN.service me.proton.vpn.split_tunneling.service && vpn any"
-    exit 1
-  fi
+  ;;
+safe)
+  protonvpn connect --country Switzerland --p2p 2>&1 | tail -3
   ;;
 off)
   protonvpn disconnect 2>&1 | tail -1
   echo "VPN off — using bare internet"
+  exit 0
   ;;
 status)
   protonvpn status 2>&1
   echo "Public IP: $(curl -s --max-time 8 https://ipinfo.io/ip) ($(curl -s --max-time 8 https://ipinfo.io/city))"
+  exit 0
   ;;
 *)
-  echo "usage: vpn [off|any|status]"
+  echo "usage: vpn [off|any|safe|status]"
   echo "  off    — bare internet"
-  echo "  any    — Proton VPN, any exit"
+  echo "  any    — Proton VPN, fastest exit anywhere"
+  echo "  safe   — Proton VPN, Switzerland exit (P2P-friendly)"
   echo "  status — connection state + public IP"
   echo "LAN access from outside: tailscale (not this script)"
+  exit 0
   ;;
 esac
+
+# guard: route check + real fetch (route check alone passes while Proton's
+# killswitch dummy pins DNS to ::1 — see complete/away-dns-blackhole-2026-10-22.md)
+if ! ip route get 1.1.1.1 2>/dev/null | grep -q 'dev proton0'; then
+  echo "WARN: not routing through Proton - traffic is going via $(ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="dev") print $(i+1)}')"
+  exit 1
+fi
+if ! curl -s --max-time 8 https://ipinfo.io/ip >/dev/null; then
+  echo "WARN: proton0 is routing but traffic/DNS is dead (stale Proton killswitch state)."
+  echo "Fix: sudo systemctl restart proton.VPN.service me.proton.vpn.split_tunneling.service && vpn any"
+  exit 1
+fi

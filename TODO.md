@@ -7,12 +7,13 @@
 
 - [ ] Use Linear for task tracking
 - [ ] Setup a daily task to check if all the systems are working
-  - [ ] Make a skill that documents the list of things to check
+  - [ ] Make a skill that documents the list of things to check and probably an uptime tool with logging
 
 - [ ] What is the point of petcam thottle if the image was classified anyway? It should just update the latest.
-- [ ] Reduce the amount of near misses to label, with a better sampling approach
+- [ ] Reduce the amount of near misses to label with a better sampling approach
 - [ ] Investigate turning off the petcam when lighting is extremely bad (at night with lights off)
 - [ ] The Petcam has moved and is definitely not detect cat when they are in frame. Do we need parameters per location? Is it a model per location? Does the labelling need to include location?
+- [ ] Check if the fine training pipeline has validation
 
 - [ ] Verify nginx.conf for jellyfin and qBittorrent on tom and commit the topology to the repo for simple bootstrap. This includes the hostname files for each of Tom, Jason, and Rose.
   - Note: the intermittent 502 completed task
@@ -20,15 +21,18 @@
 - [ ] Ensure this homelab is simple to bootstrap
   - [ ] We should setup a git repo on Tom and git pull to deploy changes! This requires moving scripts to the right path and possibly symlinking when needed.
 
+- [ ] Investigate and harden the Temperature and Humidity Tracking on Tom
+
+- [ ] Look at SSE for website for Temperature and Humidity, and petcam label UI
+
+- [ ] Change qBittorrent login to tom/pancake
+
 ## Purchases
 
-- [ ] Google TV Streamer (~$219) — TV client, replaces the laptop (setup notes in docs/media/README.md)
+- [ ] Google TV Streamer or Nvidia Shield
+- [ ] Ethernet Powerline for TV
 
 ## Trades
 
-- [ ] Electrician: move the internet port
-  - While they're there (one visit, same wall): ethernet run to the TV area
-    (Streamer has an Ethernet port) + ethernet run to the desktop
-    (retires the 2.4GHz WiFi ceiling, `enp12s0` is waiting)
-  - Pi + SSD live with the router, wherever the internet port ends up
+- [ ] Electrician: move the internet port + Power and Ethernet
 

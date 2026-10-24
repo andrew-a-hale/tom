@@ -1,8 +1,8 @@
 ---
 name: petcam-retrain
 description: >
-  Retrain/fine-tune the petcam YOLO cat detector on this gaming rig and push the
-  model to the Pi. Use when the user says retrain the model, fine-tune, train the
+  Retrain/fine-tune the petcam YOLO cat detector on Jason and push the
+  model to Tom. Use when the user says retrain the model, fine-tune, train the
   cat detector, improve detection, push a new model, or asks when/how the model
   learns. Triggers: retrain, fine-tune, train yolo, new model, detection missing
   cats, training data, push model to the pi. Covers the label queue, the
@@ -11,9 +11,9 @@ description: >
 
 # Retraining the petcam detector
 
-Supervised fine-tuning with active-learning data collection — **not**
-reinforcement learning. Training happens on this rig (RTX 3070, CUDA); the Pi
-only runs inference. Never put PyTorch on the Pi.
+Supervised fine-tuning with active-learning data collection. Training happens
+on this rig (RTX 3070, CUDA); the Pi only runs inference. Never put PyTorch on
+Tom.
 
 ## When to retrain
 

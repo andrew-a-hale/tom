@@ -1,5 +1,5 @@
 # VPN health check: keep proton0 up (qBittorrent binds to it; when it is down, torrents stall - that is the leak protection)
-*/5 * * * * export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus; if ip link show proton0 >/dev/null 2>&1 && ! ping -c 1 -W 5 8.8.8.8 >/dev/null 2>&1; then protonvpn disconnect >/dev/null 2>&1; fi; ip link show proton0 >/dev/null 2>&1 || protonvpn connect --p2p >/dev/null 2>&1
+*/5 * * * * export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus; if ip link show proton0 >/dev/null 2>&1 && ! ping -c 1 -W 5 8.8.8.8 >/dev/null 2>&1; then protonvpn disconnect >/dev/null 2>&1; fi; ip link show proton0 >/dev/null 2>&1 || protonvpn connect --country Switzerland --p2p >/dev/null 2>&1
 # Watchdogs (every 2 min). pgrep -x matches process NAME only.
 # Absolute paths: crons PATH lacks /usr/local/bin (cloudflared lives there).
 */2 * * * * pgrep -x andrewhale-web >/dev/null 2>&1 || (cd /home/tom/projects/andrewahale.com/web && nohup ./andrewhale-web > /tmp/andrewhale-web.log 2>&1 &)

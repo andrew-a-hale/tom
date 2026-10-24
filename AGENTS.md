@@ -16,7 +16,7 @@ Everything should be documented and be agent friendly.
 
 ## Where things run
 
-The Pi (`tom`, Raspberry Pi 5) is the server: Jellyfin, qBittorrent, website, VPN gateway, Petcam, Office Temp and Humidity.
+Tom (Raspberry Pi 5) is the server: Jellyfin, qBittorrent, website, Petcam, Office Temp and Humidity.
 
 Jellyfin and Website are accessible off the network.
 Jellyfin is behind a secure password.
@@ -27,11 +27,19 @@ Jason (Gaming Rig) does YOLO model fine tuning for the Petcam and is temporarily
 
 Rose (Laptop) uses jellyfin with TV in place of the Google Streamer TV solution temporarily.
 
+## Detailed Todos and Tickets
+
+The TODO.md is very high level and is intended for humans. When TODO items are too large and must be planned and broken down they should go into ./docs/{project}/todo/{brief}.md.
+
+When they are done they should be moved to ./docs/{project}/complete/{brief}-{date}.md because they are completed.
+
 ## Decisions
 
 When we complete tasks and make decisions we should add a new file that describes the decision and why it was made, and the task that was complete and the reason why.
 
 These should live in the ./docs/{project}/complete/{brief}-{date}.md.
+
+When decisions are made we need to update relevant README.md files for the project.
 
 ## Bootstrap
 

@@ -1,6 +1,6 @@
 # Server Migration
 
-TODO: "Home Lab server needs to move from this desktop to a server with proper storage."
+// NOTE: I've bought a Dell Optiplex and a 4TB HDD to attach to the Dell. We will install ubuntu on it.
 
 ## Current state (2026-10-21)
 

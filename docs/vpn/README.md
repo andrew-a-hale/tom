@@ -1,5 +1,7 @@
 # VPN
 
+// TODO: Roll the Design into this README
+
 Redesigned 2026-10-22/23 (plan: `design.md`, decision: `complete/proton-cli-tailscale-redesign-2026-10-23.md`).
 Three orthogonal jobs, three tools — no shared switch:
 
@@ -14,7 +16,8 @@ Three orthogonal jobs, three tools — no shared switch:
 | Command | Does | Meaning |
 |---|---|---|
 | `vpn off` | `protonvpn disconnect` | bare ISP |
-| `vpn any` | `protonvpn connect` | Proton, any exit |
+| `vpn any` | `protonvpn connect` | Proton, fastest exit anywhere |
+| `vpn safe` | `protonvpn connect --country Switzerland --p2p` | Proton, Switzerland exit (P2P-friendly, for torrents) |
 | `vpn status` | `protonvpn status` + public IP | check before anything sensitive |
 
 - The `any` guard does a real fetch end-to-end and exits 1 with a fix hint
@@ -29,7 +32,7 @@ Three orthogonal jobs, three tools — no shared switch:
 ## tom (the Pi)
 
 - `proton-vpn-cli` 1.0.5 + `proton-vpn-daemon` 0.13.8 from Proton's Debian repo
-  (arm64 works). Connected with `protonvpn connect --p2p`; a 5-min cron
+  (arm64 works). Connected with `protonvpn connect --country Switzerland --p2p`; a 5-min cron
   watchdog keeps `proton0` up (see `crontab -l`). **Cron needs
   `DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus`** — the CLI talks to
   the user session bus.
@@ -74,7 +77,7 @@ Proton's Debian build is missing pieces their Arch build doesn't need:
    `https://repo.protonvpn.com/debian/dists/stable/main/binary-all/`, then
    `apt install proton-vpn-cli proton-vpn-daemon`.
 2. Drop in the two files above + `systemctl daemon-reload`.
-3. `protonvpn signin <username> --totp`, then `protonvpn connect --p2p`.
+3. `protonvpn signin <username> --totp`, then `protonvpn connect --country Switzerland --p2p`.
 4. Bind qBittorrent to `proton0`; put the watchdog line in crontab (with the
    DBUS env var).
 
