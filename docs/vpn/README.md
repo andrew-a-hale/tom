@@ -83,13 +83,13 @@ Proton's Debian build is missing pieces their Arch build doesn't need:
 
 ## Tailscale — remote access to the LAN
 
-- tom advertises `192.168.1.0/24` (and, from an earlier setup, exit-node
-  routes `0.0.0.0/0` + `::/0` — leave them unapproved unless home-exit is
-  wanted). **Approve routes in the Tailscale admin console** (machine `tom` →
-  Edit route settings).
-- Clients: `iphone-11` and `jason` are in the tailnet already; add the laptop
-  the same way. One toggle per device, works from anywhere (NAT traversal —
-  never port-forward).
+- tom advertises `192.168.1.0/24` only (exit-node routes dropped 2026-10-24).
+  **Route approved in the Tailscale admin console** (machine `tom` → Edit route
+  settings). Home-exit routing remains an upgrade path (`--advertise-exit-node`).
+- Clients: `iphone-11` is in the tailnet (remote LAN access from the phone).
+  `jason` was removed 2026-10-24 (always on the same LAN, no remote access
+  needed); add the laptop the same way if wanted. One toggle per device, works
+  from anywhere (NAT traversal — never port-forward).
 
 ## Deleted 2026-10-23 (the old machinery)
 
@@ -101,11 +101,13 @@ Proton's Debian build is missing pieces their Arch build doesn't need:
 - Stale `wg0.conf` (referenced `eth0`) and jason's 5 wireguard confs
   (`protonvpn{,-au,-us}`, `wg-pi`, `wg0-vps`).
 
-## Cleanup left to the human
+## Cleanup (completed 2026-10-24)
 
-- Router: remove the UDP/51820 port-forward (old wg-lan remote access) if present.
-- Cloudflare DNS: delete the `vpn.andrewahale.com` record (202.59.30.216 — stale).
-- Tailscale admin: approve tom's `192.168.1.0/24` route.
+- Router: removed the UDP/51820 port-forward (old wg-lan remote access).
+- Cloudflare DNS: deleted the stale `vpn.andrewahale.com` record (202.59.30.216).
+- Tailscale admin: approved tom's `192.168.1.0/24` route; also dropped tom's
+  exit-node advertisement (`0.0.0.0/0`, `::/0`) so it no longer requests
+  exit-node use. Exit-node routing remains an upgrade path only.
 
 ## Bugs found & fixed
 

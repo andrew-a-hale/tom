@@ -2,9 +2,6 @@
 
 ## Home Lab
 
-- [ ] Approve tom's 192.168.1.0/24 Tailscale route (admin console); remove
-      router UDP/51820 port-forward + stale vpn.andrewahale.com DNS record
-
 - [ ] Use Linear for task tracking
 - [ ] Setup a daily task to check if all the systems are working
   - [ ] Make a skill that documents the list of things to check and probably an uptime tool with logging
@@ -20,10 +17,6 @@
 
 - [ ] Ensure this homelab is simple to bootstrap
   - [ ] We should setup a git repo on Tom and git pull to deploy changes! This requires moving scripts to the right path and possibly symlinking when needed.
-
-- [ ] Investigate and harden the Temperature and Humidity Tracking on Tom
-
-- [ ] Look at SSE for website for Temperature and Humidity, and petcam label UI
 
 - [ ] Change qBittorrent login to tom/pancake
 
