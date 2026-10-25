@@ -87,5 +87,7 @@ power and heat.
 ## Status
 Diagnosis strengthened with expanded data. Mitigation applied: capture/stream
 framerate reduced 10 -> 1 fps in `scripts/petcam.sh` and deployed/restarted on
-Tom (2026-10-25). Detection unaffected (stills remain 1 fps). Hardware reseat +
-monitoring remain next actions.
+Tom (2026-10-25). Detection unaffected (stills remain 1 fps). Crashes continued,
+so camera pipeline fully stopped (cron entries commented, processes killed) on
+2026-10-25 to test whether reboots stop without the camera. If stable, root
+cause confirmed as camera I2C/CSI; next step hardware reseat/PSU.

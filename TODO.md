@@ -16,6 +16,8 @@
 - [x] Diagnose Tom restarts (root cause: Pi Camera Module 3 I2C/CSI stall -> RCU stall -> watchdog reboot; see docs/petcam/complete/camera-i2c-rcu-stall-reboot-2026-10-25.md)
 - [ ] Fix Tom restarts
 
+- [ ] Convert blog to Zine (https://zine-ssg.io/) and put the blog on a subdomain
+
 ## Purchases
 
 - [ ] Google TV Streamer or Nvidia Shield

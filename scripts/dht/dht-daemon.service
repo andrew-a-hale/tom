@@ -1,7 +1,7 @@
 [Unit]
 Description=DHT12 office temp/humidity -> web/static/dht.json
 After=dev-ttyUSB0.device
-Requisite=dev-ttyUSB0.device
+Wants=dev-ttyUSB0.device
 
 [Service]
 User=tom
