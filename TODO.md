@@ -20,10 +20,13 @@
 
 - [ ] Change qBittorrent login to tom/pancake
 
+- [ ] Diagnose Tom restarts
+
 ## Purchases
 
 - [ ] Google TV Streamer or Nvidia Shield
 - [ ] Ethernet Powerline for TV
+- [ ] Smart Lamp
 
 ## Trades
 

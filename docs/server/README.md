@@ -1,3 +1,10 @@
+## SSH access to Tom
+
+Jason's SSH client must use `IPQoS none` for `tom` (see `~/.ssh/config`):
+default IPQoS marks packets that Jason's UFW/conntrack drops, which made direct
+SSH to Tom time out. Do not reintroduce the old `ProxyCommand` bash `/dev/tcp`
+wrapper.
+
 # Server Migration
 
 // NOTE: I've bought a Dell Optiplex and a 4TB HDD to attach to the Dell. We will install ubuntu on it.

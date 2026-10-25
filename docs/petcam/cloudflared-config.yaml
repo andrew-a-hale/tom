@@ -3,14 +3,14 @@ tunnel: 5b7e3976-7429-495d-beee-45d5213a0798
 credentials-file: /home/tom/.cloudflared/5b7e3976-7429-495d-beee-45d5213a0798.json
 
 ingress:
+  - hostname: jellyfin.andrewahale.com
+    service: http://127.0.0.1:8096
   - hostname: andrewahale.com
     service: http://127.0.0.1:8080
   - hostname: www.andrewahale.com
     service: http://127.0.0.1:8080
-  - hostname: jellyfin.andrewahale.com
-    service: http://127.0.0.1:8096
   - hostname: petcam.andrewahale.com
     service: http://127.0.0.1:8080
   - hostname: placetime.andrewahale.com
-    service: http://127.0.0.1:8081
+    service: http://127.0.0.1:8080
   - service: http_status:404
