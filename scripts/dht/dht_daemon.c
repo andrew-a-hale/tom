@@ -59,12 +59,14 @@ int main(int argc, char **argv) {
 
   for (;;) {
     char ch;
+
     int n = read(fd, &ch, 1);
     if (n > 0) {
       if (ch == '\n') {
         buf[pos] = '\0';
         // parse "20.4 C  24.3 %"
         float temp, hum;
+
         if (sscanf(buf, "%f C  %f %%", &temp, &hum) == 2) {
           last_ok = time(NULL);
           // atomic-ish: write to temp file, then rename
@@ -72,8 +74,10 @@ int main(int argc, char **argv) {
           snprintf(tmp, sizeof(tmp), "%s.tmp", path);
           FILE *f = fopen(tmp, "w");
           if (f) {
-            fprintf(f, "{\"temp\":%.1f,\"humidity\":%.1f, \"date\": \"%s\"}\n",
-                    temp, hum, asctime(gmtime(&last_ok)));
+            char *date = asctime(gmtime(&last_ok));
+            date[strlen(date) - 1] = '\0'; /* strip trailing newline */
+            fprintf(f, "{\"temp\":%.1f,\"humidity\":%.1f, \"date\":\"%s\"}\n",
+                    temp, hum, date);
             fclose(f);
             rename(tmp, path);
           }
