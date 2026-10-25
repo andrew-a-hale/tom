@@ -94,34 +94,38 @@ PyTorch there) — Colab + ultralytics, export ONNX, swap the model file.
 
 What the detector collects (`harvest()` / `save()` in `~/petcam-detect.py`):
 - `~/petcam/training/images/` + `~/petcam/training/labels/` — every confident
-  detection: clean frame (no boxes drawn) + YOLO txt (`0 cx cy w h`,
-  normalized, class 0 = cat). Free pseudo-labels.
+  detection: clean frame (no boxes drawn) + YOLO txt (`<class> cx cy w h`,
+  normalized). Class ids are `0 = pancake`, `1 = willow` (2-class model; the
+  detector names the cat from the model output, not a hue classifier).
 - `~/petcam/tolabel/` — near-miss frames (0.1 <= top score < MIN_CONF 0.4),
-  max one per 2 min. Sidecar txt = YOLO proposal box + hue-classifier name
-  proposal. Label them **on the site (`/label`)**: approve (proposal or dragged
-  box), name it (cat/willow/pancake), or reject — saves land in `training/`
-  as YOLO pairs with the name in the filename. `--checknames` on the detector
-  = regression check of the hue classifier against the hand-named crops.
+  max one per 2 min. Sidecar txt = YOLO proposal box + proposed cat name.
+  Label them **on the site (`/label`)**:
+  - **save** (cat selected) writes an approved box + class id to `training/`;
+  - **reject** saves the frame as a **negative** (empty label file);
+  - **delete** removes corrupt/error frames entirely.
+  `/live` has a **Capture** button that snapshots the current 1 fps still, runs
+  YOLO, and queues it with a proposed box + cat name.
+- `--checknames` on the detector = regression check of the legacy hue
+  classifier against the hand-named crops (kept for calibration).
 
-To continue later (retraining is manual and deliberate — see "When to
-retrain" below):
-1. Label the `tolabel` images on the site (`/label`) — approve / draw / reject,
-   name the cat when obvious.
-2. Merge with `training/`, train/val split, `data.yaml`.
-3. Colab: `yolo detect train model=yolov8n.pt data=data.yaml epochs=50 imgsz=640`
-   then `yolo export format=onnx`.
-4. `scp` the ONNX to `~/petcam/model/yolov8n.onnx`, restart the detector. The
-   decoder auto-detects a 1-class model output — no code change needed.
+To retrain later (manual and deliberate):
+1. Label the `tolabel` images on the site (`/label`).
+2. On Jason: `cd ~/projects/tom && EPOCHS=100 scripts/train-model.sh`
+   (pulls pairs via rsync, 80/20 split, trains `yolov8n` at `imgsz=640`,
+   exports ONNX, pushes to Tom, restarts the detector). Venv:
+   `~/petcam-train/.venv` (Python 3.12).
+3. Quality gate: `--selftest`, score known cat + cat-free frames vs `.bak`,
+   watch `/log` / gallery before trusting the swap. Roll back to `.bak` if needed.
 
 When to retrain: once the `/label` queue is worked through and real misses
-remain (curled-cat ceiling), with ~50–200 labeled boxes. Never automatic —
-the quality gate is `--checknames` + a gallery check before accepting the
-swap. This is supervised fine-tuning with active-learning data collection
-(uncertainty sampling + pseudo-labels), not reinforcement learning.
+remain, with ~50–200 labeled boxes. Never automatic. This is supervised
+fine-tuning with active-learning data collection (uncertainty sampling +
+pseudo-labels), not reinforcement learning.
 
 Half-baked edges to finish later: no dedupe (near-identical near-miss frames
-pile up), no size cap on either folder, the 0.1–0.4 band and 2 min throttle are
-guesses, no split tooling. Class 0 = "cat" only: the willow/pancake naming
+pile up), no size cap on either folder, the 0.1–0.4 band and 2-min harvest
+throttle are guesses, no split tooling. (Detection shot-throttle removed —
+latest shot now updates on every pass.) Class 0 = "cat" only: the willow/pancake naming
 stays the hue classifier's job, not the model's. The hue classifier needs to
 take into account the room lighting.
 

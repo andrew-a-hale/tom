@@ -25,8 +25,10 @@ boxes is plenty for yolov8n on one fixed camera angle. Training takes seconds.
 ## Data (already collected by the detector)
 
 - `tom@192.168.1.24:~/petcam/training/{images,labels}/` — YOLO pairs (class 0 =
-  cat). Confident detections are auto-labeled; names (`_willow`/`_pancake`) ride
-  in the filename, they are the hue classifier's business, not the model's.
+  pancake, class 1 = willow). Confident detections are auto-labeled by the
+  2-class model; names (`_willow`/`_pancake`) may still ride in the filename
+  for the legacy hue-classifier corpus. Rejected near-misses are saved as
+  negatives (empty label files); corrupt frames are deleted via `/label`.
 - Near-miss frames queue up in `~/petcam/tolabel/` and get labeled at
   `https://petcam.andrewahale.com/label` (approve / draw / reject, name buttons).
 
@@ -67,8 +69,9 @@ ssh tom@192.168.1.24 'pkill -f "petcam-detect[.]py$"; sleep 1;
   once). `train-model.sh` uses absolute paths — leave them absolute.
 - Don't push a model trained on a handful of images just to test the pipeline;
   it regresses detection. The pipeline check is the run itself, not the model.
-- The ONNX decoder auto-detects output shape: COCO-84 (base yolov8n) or a
-  1-class fine-tune both work unchanged.
+- The ONNX decoder auto-detects output shape: COCO-84 (base yolov8n), a
+  1-class fine-tune, or a 2-class (pancake/willow) fine-tune. Training
+  labels use class 0 = pancake, 1 = willow.
 - Killing/restarting the detector from a command that literally contains
   `petcam-detect.py` self-matches `pkill -f`; use the bracketed pattern
   `petcam-detect[.]py` in anything on the same command line.

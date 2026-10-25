@@ -77,8 +77,9 @@ User decision — it's a gaming rig. Also the most expensive option per year.
    Detection: `~/petcam-detect.py` (YOLOv8n ONNX via OpenCV DNN, model in
    `~/petcam/model/`) watches the stills and writes cat snapshots to
    `~/petcam/shots/` — timestamped filename is the gallery contract. Orange
-   vs gray label via fur-hue histogram, drawn on the snapshot; 10-min
-   throttle per label (`MIN_CONF` and hue knobs at the top of the script).
+   vs gray label via fur-hue histogram, drawn on the snapshot. Every
+   detection updates the latest shot per cat (`KEEP_PER_CAT=1` keeps storage
+   to one file per cat; no throttle). Knobs: `MIN_CONF`, hue thresholds.
    ~~Jellyfin "Live TV" M3U channel~~ — dropped 2026-10-21 in favour of the
    Go website (one codebase, one page).
 9. ~~Remote access: add `jellyfin.andrewahale.com` to the existing Cloudflare
@@ -108,3 +109,12 @@ Setup when it arrives: HDMI + power → sign in Wi-Fi/Google → install Jellyfi
 from Play Store → point at the server → sign in → direct play. (Sourcing note:
 Jellyfin Android TV app handles the weak-Pi-transcode ceiling by direct
 playing ~everything H.264/HEVC.)
+
+## Known stability issue: random Tom reboots
+Tom's random reboots are caused by the Pi Camera Module 3 (imx708) I2C/CSI
+bus timing out while `rpicam-vid` runs the 24/7 petcam pipeline; the stall
+starves RCU and the hardware watchdog resets the Pi. Not power/thermal
+(`throttled=0x0`, 57-59 C) and not Jellyfin. Diagnosis + expanded data:
+`docs/petcam/complete/camera-i2c-rcu-stall-reboot-2026-10-25.md`. Next
+actions: reseat camera ribbon + verify PSU, then optionally lower camera
+resolution/fps in `scripts/petcam.sh`.

@@ -12,7 +12,7 @@ It is currently hosting a Website: andrewahale.com
 
 There is a TODO.md that tracks the items to work on. These are high level items, and each will have there own docs and folders here.
 
-Everything should be documented and be agent friendly.
+Everything should be documented, be agent friendly, and grounded with latest information by using Web Search.
 
 ## Where things run
 

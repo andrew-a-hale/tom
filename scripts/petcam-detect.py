@@ -13,7 +13,6 @@ Usage: python3 petcam-detect.py          # loop (cron runs this)
        python3 petcam-detect.py --selftest
 """
 
-import json
 import os
 import sys
 import time
@@ -25,16 +24,15 @@ import numpy as np
 STILL = "/dev/shm/petcam/frames/latest.jpg"
 SHOTS = os.path.expanduser("~/petcam/shots")
 MODEL = os.path.expanduser("~/petcam/model/yolov8n.onnx")
-THROTTLE_FILE = "/dev/shm/petcam/throttle.json"
 
 HARVEST_SAMPLING_RATE = 0.25
 
-THROTTLE_S = 600  # one shot per label per 10 min (no 500 photos of a napping cat)
 MIN_CONF = 0.4
 NAME = {"gray": "willow", "orange": "pancake"}  # coat label -> cat
 KEEP_PER_CAT = 1  # per label: newest 1 kept (newest = "latest")          # detection confidence (knob: raise if furniture gets "detected")
 INPUT = 640  # YOLO input size
 CAT = 15  # COCO class index of "cat"
+CLASS_NAME = {0: "pancake", 1: "willow"}  # 2-class fine-tune class ids
 # Calibrated 2026-10-22 over 113 hand-labeled boxes, bright room light to dim night:
 #   pancake orange=0.27-0.75, willow orange=0.00-0.10 -> orange fraction alone
 #   separates the cats; threshold sits in the gap. (The old gray-fraction rule
@@ -106,10 +104,22 @@ def detect(net, img, roi=None):
     canvas[: resized.shape[0], : resized.shape[1]] = resized
     blob = cv2.dnn.blobFromImage(canvas, 1 / 255.0, (INPUT, INPUT), swapRB=True)
     net.setInput(blob)
-    preds = net.forward()[0].T  # (8400, 84): 4 box + 80 class scores
-    scores = (
-        preds[:, 4 + CAT] if preds.shape[1] == 84 else preds[:, 4]
-    )  # 4: cat on a 1-class fine-tune
+    preds = net.forward()[0].T  # (8400, 4+nc): 4 box + nc class scores
+    nc = preds.shape[1] - 4
+    if nc >= 80:
+        # COCO base model: keep only the cat class.
+        scores = preds[:, 4 + CAT]
+        classes = np.full(preds.shape[0], CAT, dtype=int)
+    elif nc == 1:
+        scores = preds[:, 4]
+        classes = np.zeros(preds.shape[0], dtype=int)
+    elif nc >= 2:
+        cls_scores = preds[:, 4:]
+        scores = cls_scores.max(axis=1)
+        classes = cls_scores.argmax(axis=1)
+    else:
+        scores = preds[:, 4]
+        classes = np.zeros(preds.shape[0], dtype=int)
     top = float(scores.max()) if scores.size else 0.0
     src = "full" if roi is None else "motion=" + ",".join(str(v) for v in roi)
     log_raw(f"scan {src} top={top:.2f} min={MIN_CONF}")
@@ -126,7 +136,7 @@ def detect(net, img, roi=None):
             ),
         )
     keep = np.where(scores >= MIN_CONF)[0]
-    boxes, confs = [], []
+    boxes, confs, clses = [], [], []
     for i in keep:
         cx, cy, bw, bh = preds[i, :4]
         boxes.append(
@@ -138,22 +148,12 @@ def detect(net, img, roi=None):
             )
         )
         confs.append(float(scores[i]))
+        clses.append(int(classes[i]))
     idx = cv2.dnn.NMSBoxes(boxes, confs, MIN_CONF, 0.45) if boxes else []
-    return [boxes[i] for i in np.array(idx).flatten()]
-
-
-def throttle_ok(label, now):
-    try:
-        with open(THROTTLE_FILE) as f:
-            last = json.load(f)
-    except (OSError, ValueError):
-        last = {}
-    if now - last.get(label, 0) < THROTTLE_S:
-        return False
-    last[label] = now
-    with open(THROTTLE_FILE, "w") as f:
-        json.dump(last, f)
-    return True
+    out = []
+    for i in np.array(idx).flatten():
+        out.append((boxes[i], clses[i]))
+    return out
 
 
 TRAIN_IMG = "/home/tom/petcam/training/images"  # auto-labeled: clean frames + YOLO txt
@@ -202,9 +202,10 @@ def save(img, boxes, labels):
     cv2.imwrite(os.path.join(TRAIN_IMG, ts + ".jpg"), img)  # clean frame for training
     h, w = img.shape[:2]
     with open(os.path.join(TRAIN_LBL, ts + ".txt"), "w") as f:
-        for x1, y1, x2, y2 in boxes:
+        for (x1, y1, x2, y2), label in zip(boxes, labels):
+            cid = 0 if label == "pancake" else 1 if label == "willow" else 0
             f.write(
-                f"0 {(x1 + x2) / 2 / w:.6f} {(y1 + y2) / 2 / h:.6f} {(x2 - x1) / w:.6f} {(y2 - y1) / h:.6f}\n"
+                f"{cid} {(x1 + x2) / 2 / w:.6f} {(y1 + y2) / 2 / h:.6f} {(x2 - x1) / w:.6f} {(y2 - y1) / h:.6f}\n"
             )
     for (x1, y1, x2, y2), label in zip(boxes, labels):
         cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
@@ -257,26 +258,26 @@ def pass_once(net):
     if moved is None and now - last_full < HEARTBEAT_S:
         return
     last_full = now
-    boxes = detect(net, img)
+    dets = detect(net, img)
     if moved and moved[2] * moved[3] < 0.6 * img.shape[0] * img.shape[1]:
-        boxes += detect(
+        dets += detect(
             net, img, moved
         )  # zoomed pass; skipped when motion is everywhere
-    if not boxes:
+    if not dets:
         return
     labels = []
     keep = []
-    for b in boxes:
-        cat, orf, grf = classify(img[b[1] : b[3], b[0] : b[2]])
-        log_raw(f"classify orange={orf:.2f}/{ORANGE_FRAC} gray={grf:.2f} -> {cat}")
-        cat = NAME.get(cat, cat)
-        if throttle_ok(cat, now):
-            labels.append(cat)
-            keep.append(b)
-        else:
-            log_raw(f"throttled {cat} ({THROTTLE_S}s per cat)")
+    for b, cls in dets:
+        cat = CLASS_NAME.get(cls, "cat")
+        log_raw(f"detect class={cls} -> {cat}")
+        # No throttle: a detection always updates the latest shot for that cat.
+        # KEEP_PER_CAT=1 already keeps storage to one file per cat, so throttling
+        # only made the gallery stale. Training pairs still accumulate (see README).
+        labels.append(cat)
+        keep.append(b)
     if keep:
         save(img, keep, labels)
+        log_raw(f"saved latest {', '.join(sorted(set(labels)))}")
 
 
 def checknames():
@@ -289,7 +290,12 @@ def checknames():
         want = next((n for n in NAME.values() if stem.endswith("_" + n)), None)
         if want is None:
             continue
-        fields = open(os.path.join(TRAIN_LBL, stem + ".txt")).read().split()
+        lp = os.path.join(TRAIN_LBL, stem + ".txt")
+        if not os.path.exists(lp) or os.path.getsize(lp) == 0:
+            continue
+        fields = open(lp).read().split()
+        if len(fields) < 5:
+            continue
         x, y, w, h = (float(v) for v in fields[1:5])
         img = cv2.imread(os.path.join(TRAIN_IMG, f))
         H, W = img.shape[:2]
@@ -340,6 +346,7 @@ def selftest():
             "LOG": os.path.join(d, "detlog"),
             "TOLABEL": d,
             "last_harvest": 0.0,
+            "HARVEST_SAMPLING_RATE": 0.0,
         }
     )
     harvest(np.full((100, 100, 3), 100, np.uint8), 0.3, (10, 10, 50, 50))
@@ -364,6 +371,26 @@ if __name__ == "__main__":
         sys.exit(0)
     if "--selftest" in sys.argv:
         selftest()
+        sys.exit(0)
+    if "--capture" in sys.argv:
+        img = cv2.imread(STILL)
+        if img is None:
+            print("capture failed: no frame", flush=True)
+            sys.exit(1)
+        os.makedirs(TOLABEL, exist_ok=True)
+        net = cv2.dnn.readNet(MODEL)
+        dets = detect(net, img)
+        ts = time.strftime("%Y-%m-%d_%H-%M-%S")
+        stem = os.path.join(TOLABEL, ts + "_manual")
+        cv2.imwrite(stem + ".jpg", img)
+        if dets:
+            (x1, y1, x2, y2), cls = dets[0]
+            name = CLASS_NAME.get(cls, "cat")
+            with open(stem + ".txt", "w") as f:
+                f.write(f"{x1} {y1} {x2} {y2} {name}\n")
+            print(f"captured {stem} box={x1},{y1},{x2},{y2} name={name}", flush=True)
+        else:
+            print(f"captured {stem} (no detection)", flush=True)
         sys.exit(0)
     net = cv2.dnn.readNet(MODEL)
     if "--once" in sys.argv:

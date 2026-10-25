@@ -6,14 +6,13 @@
 # Camera capture — detection stills get this detail
 WIDTH=1280
 HEIGHT=720
-FPS=10
-BITRATE=2000000
-
+FPS=1
+BITRATE=500000
 # Stream output — what the website shows
 STREAM_W=854
 STREAM_H=480
-STREAM_FPS=10
-STREAM_BITRATE=400000
+STREAM_FPS=1
+STREAM_BITRATE=200000
 
 mkdir -p /dev/shm/petcam/frames
 trap "pkill -P \$\$; exit" TERM INT
