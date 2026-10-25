@@ -9,8 +9,8 @@ references are in this folder. The website source has its own repo
 
 | Piece | Where | Notes |
 |---|---|---|
-| `petcam.sh` | `~/petcam.sh` | always-on capture supervisor: 720p@10fps capture → 480p HLS stream + 1fps still; relaunches dead pipeline within 5 s |
-| `petcam-detect.py` | `~/petcam-detect.py` | 5 s loop, multi-pass: movement diff → YOLOv8n (2-class: pancake/willow), writes shots + log |
+| `petcam.sh` | `~/projects/tom/scripts/petcam.sh` | always-on capture supervisor: 720p@10fps capture → 480p HLS stream + 1fps still; relaunches dead pipeline within 5 s |
+| `petcam-detect.py` | `~/projects/tom/scripts/petcam-detect.py` | 5 s loop, multi-pass: movement diff → YOLOv8n (2-class: pancake/willow), writes shots + log |
 | `andrewhale-web` | `~/projects/andrewahale.com/web/` | Go binary on 127.0.0.1:8080; host-routes `petcam.andrewahale.com` (gallery `/`, `/live`, `/log`, `/delete`) |
 | cloudflared | `/usr/local/bin/cloudflared` | tunnel `andrewahale`, ingress in `cloudflared-config.yaml` |
 | nginx | :80 | LAN aliases `tom/jf/` (Jellyfin), `tom/bt/` (qBittorrent + basic auth) |
@@ -49,7 +49,7 @@ references are in this folder. The website source has its own repo
 
 ```bash
 rpicam-still --list-cameras            # one imx708 (two once the NoIR lands)
-python3 ~/petcam-detect.py --selftest  # classifier + label math + empty-frame
+python3 ~/projects/tom/scripts/petcam-detect.py --selftest  # classifier + label math + empty-frame
 curl -s -H "Host: petcam.andrewahale.com" http://127.0.0.1:8080/shots.json
 curl -s -H "Host: petcam.andrewahale.com" http://127.0.0.1:8080/log | head
 ls /dev/shm/petcam/index.m3u8          # HLS stream alive
@@ -92,7 +92,7 @@ in priority order: (1) reseat the camera ribbon + verify PSU, (2) lower
 `WIDTH/HEIGHT/FPS` in `petcam.sh`, (3) journald alert on i2c/RCU messages.
 
 Action taken 2026-10-25: capture/stream framerate reduced from 10 to 1 fps
-(`FPS=1`, `STREAM_FPS=1`) in `scripts/petcam.sh` and deployed to `~/petcam.sh`;
+(`FPS=1`, `STREAM_FPS=1`) in `scripts/petcam.sh` (run in place from the repo);
 pipeline restarted. Detection unaffected (stills remain 1 fps).
 
 ## Knobs
@@ -120,7 +120,7 @@ Full procedure in `skills/petcam-retrain/SKILL.md`.
   - exports ONNX, pushes to `~/petcam/model/yolov8n.onnx` (previous kept as
     `.bak`), restarts the detector.
 - Quality gate (manual): score known cat + cat-free frames vs `.bak`,
-  `ssh tom 'python3 ~/petcam-detect.py --selftest'`, watch `/log` for real
+  `ssh tom 'python3 ~/projects/tom/scripts/petcam-detect.py --selftest'`, watch `/log` for real
   detections.
 - Roll back: `ssh tom 'cp ~/petcam/model/yolov8n.onnx.bak ~/petcam/model/yolov8n.onnx'`
   then restart the detector (bracketed pkill pattern — see skill).

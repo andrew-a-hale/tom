@@ -16,7 +16,7 @@ visitor → Cloudflare edge → tunnel "andrewahale" → cloudflared (on Tom) �
   sensor on the Pi's GPIO). Also serves `petcam.andrewahale.com` (Host-routed):
   `/` = detection snapshots gallery, `/live` = HLS stream, `/shots/*` = snapshot
   files (`/home/tom/petcam/shots/`), `/hls/*` = stream segments (`/dev/shm/petcam`,
-  produced by `~/petcam.sh`).
+  produced by `~/projects/tom/scripts/petcam.sh`).
 - **Tunnel**: `cloudflared tunnel run andrewahale` on Tom. Locally-managed
   — ingress lives in `/home/tom/.cloudflared/config.yaml` on the Pi
   (andrewahale.com + www + petcam → :8080, jellyfin.andrewahale.com → :8096,

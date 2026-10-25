@@ -67,14 +67,14 @@ User decision — it's a gaming rig. Also the most expensive option per year.
 6. ~~Update AGENTS.md / docs~~ **done** (docs/media, AGENTS.md pointer).
 7. Photos/Andrew personal data stays on desktop + weekly Proton sync
    (docs/backups) — not the media SSD's problem.
-8. Pet cam (live-only, no retention): `rpicam-vid` (`~/petcam.sh` on the Pi,
+8. Pet cam (live-only, no retention): `rpicam-vid` (`~/projects/tom/scripts/petcam.sh` on the Pi,
    capture 720p, stream knobs at the top of that script) → one ffmpeg forks:
    480p/10fps HLS segments in `/dev/shm/petcam` + 1fps stills at
    `/dev/shm/petcam/frames/latest.jpg` → served by the Go web app at
    `petcam.andrewahale.com` (snapshots gallery at `/`, stream at `/live`;
    see docs/website/README.md). Module 3, indoor pets; NoIR stays spare
    for outdoor/night.
-   Detection: `~/petcam-detect.py` (YOLOv8n ONNX via OpenCV DNN, model in
+   Detection: `~/projects/tom/scripts/petcam-detect.py` (YOLOv8n ONNX via OpenCV DNN, model in
    `~/petcam/model/`) watches the stills and writes cat snapshots to
    `~/petcam/shots/` — timestamped filename is the gallery contract. Orange
    vs gray label via fur-hue histogram, drawn on the snapshot. Every

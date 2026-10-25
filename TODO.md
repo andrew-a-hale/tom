@@ -10,7 +10,6 @@
   - Note: the intermittent 502 completed task
 
 - [ ] Ensure this homelab is simple to bootstrap
-  - [x] Git repo on Tom + git pull to deploy: tom repo cloned to ~/projects/tom; ~/petcam.sh and ~/petcam-detect.py are symlinks into it. Web repo already cloned; pull + go build. (2026-10-25)
 
 - [ ] Change qBittorrent login to tom/pancake
 
