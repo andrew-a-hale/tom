@@ -1,4 +1,7 @@
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin
+# Health sample into the journal: throttled flags latch until a power cycle, so
+# this is the only way to catch a brownout that reboots the Pi.
+*/2 * * * * logger -t tom-health "up=$(cut -d. -f1 /proc/uptime)s $(vcgencmd get_throttled) temp=$(vcgencmd measure_temp) ext5v=$(vcgencmd pmic_read_adc | awk '/EXT5V_V/{print $2}')"
 # VPN health check: keep proton0 up (qBittorrent binds to it; when it is down, torrents stall - that is the leak protection)
 */5 * * * * export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus; if ip link show proton0 >/dev/null 2>&1 && ! ping -c 1 -W 5 8.8.8.8 >/dev/null 2>&1; then protonvpn disconnect >/dev/null 2>&1; fi; ip link show proton0 >/dev/null 2>&1 || protonvpn connect --country Switzerland --p2p >/dev/null 2>&1
 # Watchdogs (every 2 min).

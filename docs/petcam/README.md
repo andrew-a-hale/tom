@@ -9,7 +9,7 @@ references are in this folder. The website source has its own repo
 
 | Piece | Where | Notes |
 |---|---|---|
-| `petcam.sh` | `~/projects/tom/scripts/petcam.sh` | always-on capture supervisor: 720p@10fps capture → 480p HLS stream + 1fps still; relaunches dead pipeline within 5 s |
+| `petcam.sh` | `~/projects/tom/scripts/petcam.sh` | always-on capture supervisor: 720p@1fps capture → 480p HLS stream + 1fps still; relaunches dead pipeline (60 s backoff if it flaps), logs to `~/petcam/logs/` |
 | `petcam-detect.py` | `~/projects/tom/scripts/petcam-detect.py` | 5 s loop, multi-pass: movement diff → YOLOv8n (2-class: pancake/willow), writes shots + log |
 | `andrewhale-web` | `~/projects/andrewahale.com/web/` | Go binary on 127.0.0.1:8080; host-routes `petcam.andrewahale.com` (gallery `/`, `/live`, `/log`, `/delete`) |
 | cloudflared | `/usr/local/bin/cloudflared` | tunnel `andrewahale`, ingress in `cloudflared-config.yaml` |
@@ -94,6 +94,20 @@ in priority order: (1) reseat the camera ribbon + verify PSU, (2) lower
 Action taken 2026-10-25: capture/stream framerate reduced from 10 to 1 fps
 (`FPS=1`, `STREAM_FPS=1`) in `scripts/petcam.sh` (run in place from the repo);
 pipeline restarted. Detection unaffected (stills remain 1 fps).
+
+Reboots continued, so follow-up work and the durable instrumentation
+(journald 5 s sync, `tom-health` cron sample, persistent
+`~/petcam/logs/{rpicam,ffmpeg}.log`, supervisor `$$` fix + flap backoff) are
+documented in `todo/camera-reboots-2026-10-26.md`. Remaining fix is physical
+(ribbon reseat / PSU); UVC webcam is the fallback if it persists.
+
+Diagnose a new reboot with:
+
+```bash
+journalctl -t tom-health -n 40        # throttled / ext5v / temp trend
+journalctl -b -1 | grep -iE "i2c_designware|rcu_preempt|imx708"
+tail -50 ~/petcam/logs/rpicam.log
+```
 
 ## Knobs
 
