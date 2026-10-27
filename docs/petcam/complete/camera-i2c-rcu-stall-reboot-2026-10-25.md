@@ -80,9 +80,11 @@ power and heat.
    the latest kernel; there is no evidence 6.12 is more stable for imx708, and
    6.12 is reported to break v4l2 picamera in some setups. Revisit only if a
    specific regression is identified.
-5. **WiFi scan spam** is worth a separate, low-priority cleanup (NetworkManager /
-   wpa_supplicant auto-scan) to cut the 50k ctx/s noise, but it is not the
-   reboot cause.
+5. **WiFi scan spam** was written off here as cosmetic. It is not: on
+   2026-10-27 the wedge behind that spam was shown to be an independent reboot
+   cause (RCU stall + CPU hung on a stuck SDIO command). See
+   `docs/server/complete/wifi-scan-storm-watchdog-2026-10-27.md`; a
+   `wifi-guard.sh` cron now reloads the driver when the storm appears.
 
 ## Status
 Diagnosis strengthened with expanded data. Mitigation applied: capture/stream
@@ -91,3 +93,21 @@ Tom (2026-10-25). Detection unaffected (stills remain 1 fps). Crashes continued,
 so camera pipeline fully stopped (cron entries commented, processes killed) on
 2026-10-25 to test whether reboots stop without the camera. If stable, root
 cause confirmed as camera I2C/CSI; next step hardware reseat/PSU.
+
+## Update 2026-10-27: ribbon reseated, flap over
+
+Pipeline was restarted on the 2026-10-26 21:35 boot and the camera was gone from
+libcamera's view — every retry logged `ERROR: *** no cameras available ***`, the
+supervisor restarted it every ~65 s (55 restarts/hour, ~470 in total, no frames
+served all night). `rpicam-hello --list-cameras` also showed nothing, so this was
+sensor enumeration / CSI contact, not a pipeline crash.
+
+The CSI ribbon was **reseated on 2026-10-27**; the camera re-enumerated on the
+08:22 boot and there has been **zero** `no cameras available` since, one clean
+`rpicam-vid` per boot, and continuous fresh frames (checked 20:20, up 12 h).
+Detections kept working (e.g. `2026-10-27_20-19-52_pancake.jpg`).
+
+So: keep the cable reseat as the standing fix for this symptom, and treat the
+60 s restart backoff in `scripts/petcam.sh` as the alert (a flap in
+`~/petcam/logs/rpicam.log` means contact is going again). Nothing further to do
+while it stays clean.

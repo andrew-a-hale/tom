@@ -14,7 +14,8 @@
 - [ ] Change qBittorrent login to tom/pancake
 
 - [x] Diagnose Tom restarts (root cause: Pi Camera Module 3 I2C/CSI stall -> RCU stall -> watchdog reboot; see docs/petcam/complete/camera-i2c-rcu-stall-reboot-2026-10-25.md)
-- [ ] Fix Tom restarts — reboots still track the camera (docs/petcam/todo/camera-reboots-2026-10-26.md). Instrumentation deployed 2026-10-26; next: reseat the CSI ribbon / check the PSU (physical), bootloader update, USB webcam as fallback.
+- [x] Fix Tom restarts — camera cause fixed: CSI ribbon reseated 2026-10-27, sensor enumerates, no `no cameras available` since (see docs/petcam/complete/camera-reboots-2026-10-27.md)
+- [ ] Fix Tom restarts — wifi cause: brcmfmac scan wedge → wpa_supplicant scan storm → stuck SDIO → RCU stall → reboot. Mitigation live (`scripts/wifi-guard.sh`, cron every 2 min); still needs a week of clean boots, one unexplained 13:42 reboot, PSU check and `rpi-eeprom-update -a` (docs/server/todo/wifi-scan-wedge-2026-10-27.md)
 
 - [ ] Convert blog to Zine (https://zine-ssg.io/) and put the blog on a subdomain
 

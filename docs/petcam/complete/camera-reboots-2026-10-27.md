@@ -53,19 +53,42 @@ Tom is still rebooting (watchdog resets) whenever the petcam pipeline runs.
 old code until it next restarts (deliberately not restarted — a stop/start is
 itself a trigger).
 
-## Still to do — physical, cannot be done over SSH
+## Physical items it asked for
 
-1. Reseat the Camera Module 3 ribbon at both ends (Pi CSI port + camera board),
-   check for kinks/creased contacts, replace the cable if suspect.
-2. Verify power: official 5 V/5 A supply, no thin/cheap USB-C cable or
-   barrel-jack adapter. Brownouts are invisible after the fact.
-3. Optional: `sudo rpi-eeprom-update -a` — bootloader is from May 2025, an
-   update is available; RP1 (which owns the CSI/I2C path) is initialised by it.
-4. Fallback if the reseat does not fix it: swap the CSI camera for a USB (UVC)
-   webcam. That bypasses `rp1-cfe`/`imx708` entirely — `petcam.sh` becomes a plain
-   `ffmpeg -f v4l2` pipeline; `petcam-detect.py` is unchanged.
+1. ~~Reseat the Camera Module 3 ribbon at both ends~~ — **done 2026-10-27, fixed
+   the camera** (see Resolution above).
+2. Verify power, 3. bootloader update, 4. USB webcam fallback: not camera work —
+   carried into `docs/server/todo/wifi-scan-wedge-2026-10-27.md`.
+
+## Resolution 2026-10-27: CSI ribbon contact
+
+**Cause:** the Camera Module 3 ribbon had lost contact with the Pi. On the
+2026-10-26 21:35 boot the sensor stopped enumerating entirely — every restart
+logged `ERROR: *** no cameras available ***` and `rpicam-hello --list-cameras`
+showed nothing. The supervisor then restarted it every ~65 s (~470 times, 55/hour)
+and no frames were served all night. That is a bus/contact failure, not a
+pipeline crash.
+
+**Fix:** the ribbon was reseated (item 1 above). The camera re-enumerated on the
+08:22 boot. Since then: **zero** `no cameras available`, exactly one clean
+`rpicam-vid` start per boot, continuous fresh frames and working detections
+(checked 12 h later, e.g. `2026-10-27_20-19-52_pancake.jpg`).
+
+**Outcome:** camera instability closed. The supervisor's 60 s flap backoff in
+`scripts/petcam.sh` doubles as the alarm — a flap in `~/petcam/logs/rpicam.log`
+means `no cameras available` again, i.e. reseat the ribbon.
+
+**Not the whole reboot story:** Tom rebooted 6 more times after the reseat
+(10:52, 11:17, 12:29, 13:42, 14:43, 17:56) with a healthy camera. Those were a
+second, independent fault — a wedged brcmfmac wifi scan engine. Camera error
+counts are identical on clean and crashed boots, so the camera is not the
+differentiator for them. That work, plus PSU verification, the bootloader update
+and one unexplained 13:42 reboot, moved to
+`docs/server/todo/wifi-scan-wedge-2026-10-27.md`.
 
 ## Verify after the next reboot
+
+Still useful for the next silent reboot, whatever the cause.
 
 ```bash
 journalctl -t tom-health -n 40            # throttled / ext5v trend

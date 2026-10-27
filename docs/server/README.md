@@ -111,10 +111,30 @@ Jellyfin Android TV app handles the weak-Pi-transcode ceiling by direct
 playing ~everything H.264/HEVC.)
 
 ## Known stability issue: random Tom reboots
-Tom's random reboots are caused by the Pi Camera Module 3 (imx708) I2C/CSI
-bus timing out while `rpicam-vid` runs the 24/7 petcam pipeline; the stall
-starves RCU and the hardware watchdog resets the Pi. Not power/thermal
-(`throttled=0x0`, 57-59 C) and not Jellyfin. Diagnosis + expanded data:
-`docs/petcam/complete/camera-i2c-rcu-stall-reboot-2026-10-25.md`. Next
-actions: reseat camera ribbon + verify PSU, then optionally lower camera
-resolution/fps in `scripts/petcam.sh`.
+
+There are **two distinct reboot causes** on Tom; check the journal before
+assuming which one fired:
+
+1. **Camera (imx708) I2C/CSI stall** — `rpicam-vid` timing out on the CSI/I2C
+   bus while the 24/7 petcam pipeline runs, starving RCU until the hardware
+   watchdog resets the Pi. Diagnosis:
+   `docs/petcam/complete/camera-i2c-rcu-stall-reboot-2026-10-25.md`. The sharp
+   signal is `ERROR: *** no cameras available ***` repeating with the supervisor
+   restarting every ~65 s — that means the sensor fell off the CSI bus, so
+   reseat the ribbon. **Reseated 2026-10-27, clean since** (one clean start per
+   boot, no `no cameras available`); watch `~/petcam/logs/rpicam.log` for a flap
+   returning before blaming anything else.
+2. **Wifi scan engine wedge (brcmfmac)** — 6 reboots on 2026-10-27. Firmware
+   never completes a scan (`Scanning suppressed: status (4)`), wpa_supplicant
+   retries once a second forever, then a stuck SDIO command hangs a CPU
+   (`rcu_preempt stalls`, `brcmf_proto_bcdc_msg failed w/status -110`) and the
+   board reboots. There is **no ethernet on Tom**, so wifi is the only path:
+   `scripts/wifi-guard.sh` runs every 2 minutes from tom's crontab and reloads
+   `brcmfmac_cyw`+`brcmfmac` when the storm is present (reboot fallback if the
+   link does not come back). Diagnosis + trade-offs:
+   `docs/server/complete/wifi-scan-storm-watchdog-2026-10-27.md`; open work and
+   verification steps: `docs/server/todo/wifi-scan-wedge-2026-10-27.md`.
+
+Tell them apart fast: `journalctl -b -1 -o cat | grep -c SCAN-FAILED` (wifi) vs
+`journalctl -b -1 -o cat | grep -ciE 'imx708|unicam|csi'` (camera), plus
+`journalctl -t wifi-guard` and `journalctl -t tom-health` for power/thermal.
